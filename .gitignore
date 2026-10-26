@@ -1,0 +1,14 @@
+**/node_modules/
+**/dist/
+**/.preview/
+.env
+.env.*
+!.env.example
+*.log
+*.pem
+*.key
+.aws/
+.codex/
+.agents/
+Thumbs.db
+Desktop.ini
