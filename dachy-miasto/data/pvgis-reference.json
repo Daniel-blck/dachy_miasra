@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "retrievedAt": "2026-10-26T14:51:38.954Z",
+  "source": {
+    "name": "PVGIS 5.2 · European Commission JRC",
+    "url": "https://re.jrc.ec.europa.eu/pvg_tools/en/",
+    "api": "https://re.jrc.ec.europa.eu/api/v5_2/PVcalc"
+  },
+  "location": {
+    "latitude": 50.0614,
+    "longitude": 19.9366,
+    "name": "Kraków, Rynek Główny",
+    "elevation": 218
+  },
+  "assumptions": {
+    "technology": "c-Si",
+    "systemLossPercent": 14,
+    "radiationDatabase": "PVGIS-SARAH2",
+    "years": "2005–2020",
+    "horizon": "terrain only (no buildings)"
+  },
+  "cases": [
+    {
+      "key": "horizontal",
+      "slope": 0,
+      "aspect": 0,
+      "energyKwhPerKwp": 894.6,
+      "irradiationKwhPerM2": 1140.9,
+      "urls": [
+        "https://re.jrc.ec.europa.eu/api/v5_2/PVcalc?lat=50.0614&lon=19.9366&peakpower=1&loss=14&outputformat=json&angle=0&aspect=0"
+      ]
+    },
+    {
+      "key": "flat10",
+      "slope": 10,
+      "aspect": 0,
+      "energyKwhPerKwp": 974.3,
+      "irradiationKwhPerM2": 1231.8,
+      "urls": [
+        "https://re.jrc.ec.europa.eu/api/v5_2/PVcalc?lat=50.0614&lon=19.9366&peakpower=1&loss=14&outputformat=json&angle=10&aspect=0"
+      ]
+    },
+    {
+      "key": "eastWest10",
+      "slope": 10,
+      "aspect": [
+        -90,
+        90
+      ],
+      "energyKwhPerKwp": 888.4,
+      "irradiationKwhPerM2": 1132.6,
+      "urls": [
+        "https://re.jrc.ec.europa.eu/api/v5_2/PVcalc?lat=50.0614&lon=19.9366&peakpower=1&loss=14&outputformat=json&angle=10&aspect=-90",
+        "https://re.jrc.ec.europa.eu/api/v5_2/PVcalc?lat=50.0614&lon=19.9366&peakpower=1&loss=14&outputformat=json&angle=10&aspect=90"
+      ]
+    },
+    {
+      "key": "optimal",
+      "slope": 39,
+      "aspect": -1,
+      "energyKwhPerKwp": 1077.4,
+      "irradiationKwhPerM2": 1348.6,
+      "urls": [
+        "https://re.jrc.ec.europa.eu/api/v5_2/PVcalc?lat=50.0614&lon=19.9366&peakpower=1&loss=14&outputformat=json&optimalangles=1"
+      ]
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-import { DEFAULTS, prepareCandidates, validateParameters } from './core/model.js';
+import { DEFAULTS, prepareCandidates, validateParameters, describePortfolio } from './core/model.js';
 import { portfolioCsv } from './core/export.js';
 import { createReviewSample, reviewCsv } from './core/review.js';
 import { translate } from './i18n.js';
@@ -6,7 +6,8 @@ import { createViews } from './views.js';
 import { createRoofMap } from './map.js';
 
 const app = document.getElementById('app');
-const state = { parameters: { ...DEFAULTS }, excludedIds: [], language: 'ru', view: 'plan', mapMode: 'map', roofId: null, advanced: false, search: '', page: 0, busy: true, error: '', result: null, sensitivity: [] };
+const SCENARIOS_KEY = 'dachy-miasto-scenarios', MAX_SCENARIOS = 4;
+const state = { parameters: { ...DEFAULTS }, excludedIds: [], language: 'pl', view: 'plan', mapMode: 'map', roofId: null, advanced: false, search: '', page: 0, busy: true, error: '', result: null, sensitivity: [], curve: [], saved: [], dataFilter: 'all', sort: { key: 'energy', dir: 'desc' }, showOutside: false, fontSize: 1, theme: 'basic' };
 try {
   const stored = JSON.parse(localStorage.getItem('dachy-miasto-v1') || 'null');
   if (stored) {
@@ -17,10 +18,15 @@ try {
   }
   const language = localStorage.getItem('dachy-miasto-language');
   if (['ru', 'pl'].includes(language)) state.language = language;
+  const display = JSON.parse(localStorage.getItem('dachy-miasto-display') || 'null');
+  if ([1, 2, 3].includes(display?.fontSize)) state.fontSize = display.fontSize;
+  if (['basic', 'contrast'].includes(display?.theme)) state.theme = display.theme;
+  const saved = JSON.parse(localStorage.getItem(SCENARIOS_KEY) || '[]');
+  if (Array.isArray(saved)) state.saved = saved.filter(s => s && typeof s.label === 'string' && Number.isFinite(s.energyMwh)).slice(0, MAX_SCENARIOS);
 } catch { /* Browser storage is optional. */ }
 
 const t = (key, parameters) => translate(state.language, key, parameters);
-let roofs = [], metadata, verification, geometry, benchmark, views, roofMap;
+let roofs = [], metadata, verification, geometry, benchmark, context, registers, pvgis, views, roofMap;
 let evaluated = [], candidates = [], reasons = {}, roofById = new Map(), job = 0;
 const worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
 const optionalJson = async url => { try { const response = await fetch(url); return response.ok ? await response.json() : null; } catch { return null; } };
@@ -29,6 +35,8 @@ function persist() {
   try {
     localStorage.setItem('dachy-miasto-v1', JSON.stringify({ parameters: state.parameters, excludedIds: state.excludedIds }));
     localStorage.setItem('dachy-miasto-language', state.language);
+    localStorage.setItem(SCENARIOS_KEY, JSON.stringify(state.saved));
+    localStorage.setItem('dachy-miasto-display', JSON.stringify({ fontSize: state.fontSize, theme: state.theme }));
   } catch { /* Calculation works even when storage is disabled. */ }
 }
 
@@ -36,13 +44,15 @@ function render() {
   if (!views) return;
   app.innerHTML = views.html();
   document.documentElement.lang = state.language;
+  document.documentElement.dataset.size = state.fontSize;
+  document.documentElement.dataset.theme = state.theme;
   document.title = t('title');
   document.querySelector('meta[name="description"]').content = t('description');
   document.querySelector('.skip-link').textContent = t('skip');
   const host = app.querySelector('.map-host');
   if (host) {
     roofMap.mount(host, state.language);
-    roofMap.update({ selectedIds: state.result?.selectedIds || [], eligibleIds: candidates.map(r => r.id), roofId: state.roofId });
+    roofMap.update({ selectedIds: state.result?.selectedIds || [], eligibleIds: candidates.map(r => r.id), roofId: state.roofId, showOutside: state.showOutside });
   }
   document.getElementById('advanced')?.addEventListener('toggle', event => { state.advanced = event.target.open; });
 }
@@ -63,7 +73,7 @@ worker.onmessage = ({ data }) => {
   state.busy = false;
   if (data.error) state.error = data.error;
   else {
-    state.result = data.result; state.sensitivity = data.sensitivity;
+    state.result = data.result; state.sensitivity = data.sensitivity; state.curve = data.curve || [];
     if (!state.roofId) state.roofId = data.result.selectedIds[0] || candidates[0]?.id || roofs[0]?.id;
   }
   render();
@@ -77,6 +87,21 @@ function selectRoof(id, source = 'list') {
   if (source !== 'map') roofMap.focus(id);
 }
 
+function planFacts() {
+  if (!state.result) return null;
+  return describePortfolio(state.result.selectedIds.map(id => roofById.get(id)).filter(Boolean), state.parameters);
+}
+
+function saveScenario() {
+  const facts = planFacts();
+  if (state.busy || !facts || state.saved.length >= MAX_SCENARIOS) return;
+  const used = new Set(state.saved.map(s => s.label));
+  let n = 1; while (used.has(`${t('variant')} ${n}`)) n++;
+  const p = state.parameters;
+  state.saved = [...state.saved, { label: `${t('variant')} ${n}`, budgetPln: p.budgetPln, maxCapacityKwp: p.maxCapacityKwp, count: facts.count, energyMwh: facts.annualEnergyKwh / 1000, co2Tonnes: facts.co2Tonnes, costPerMwhPln: facts.costPerMwhPln, procedures: facts.procedures, parameters: { ...p }, excludedIds: [...state.excludedIds] }];
+  persist(); render();
+}
+
 function download(filename, content, type) {
   const url = URL.createObjectURL(new Blob([content], { type }));
   const link = document.createElement('a'); link.href = url; link.download = filename; link.click();
@@ -85,8 +110,10 @@ function download(filename, content, type) {
 
 app.addEventListener('click', event => {
   if (event.target.closest('#city-map')) return; // Leaflet owns its pointer, keyboard and wheel events.
+  const language = event.target.closest('[data-language]');
+  if (language) { state.language = language.dataset.language; persist(); render(); return; }
   const view = event.target.closest('[data-view]');
-  if (view) { event.preventDefault(); state.view = view.dataset.view; render(); return; }
+  if (view) { event.preventDefault(); const changed = state.view !== view.dataset.view; state.view = view.dataset.view; render(); if (changed) window.scrollTo(0, 0); return; }
   const roof = event.target.closest('[data-roof-id]');
   if (roof) { selectRoof(roof.dataset.roofId); return; }
   const button = event.target.closest('[data-action]');
@@ -103,6 +130,15 @@ app.addEventListener('click', event => {
       recalculate(); break;
     }
     case 'reset': state.parameters = { ...DEFAULTS }; state.excludedIds = []; state.roofId = null; recalculate(); break;
+    case 'save-scenario': saveScenario(); break;
+    case 'font-size': state.fontSize = Number(button.dataset.size); persist(); render(); roofMap?.resize(); break;
+    case 'theme': state.theme = button.dataset.theme; persist(); render(); break;
+    case 'remove-scenario': state.saved = state.saved.filter((_, i) => i !== Number(button.dataset.index)); persist(); render(); break;
+    case 'sort': {
+      const key = button.dataset.key;
+      state.sort = state.sort.key === key ? { key, dir: state.sort.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: ['name', 'district', 'procedure'].includes(key) ? 'asc' : 'desc' };
+      state.page = 0; render(); document.querySelector(`[data-action="sort"][data-key="${key}"]`)?.focus(); break;
+    }
     case 'map': case 'list': state.mapMode = button.dataset.action; render(); break;
     case 'map-all': roofMap.fitAll(); break;
     case 'map-selected': roofMap.fitSelected(state.result?.selectedIds || []); break;
@@ -110,9 +146,9 @@ app.addEventListener('click', event => {
     case 'show-details': document.getElementById('roof-details')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); break;
     case 'prev-page': state.page = Math.max(0, state.page - 1); render(); break;
     case 'next-page': state.page++; render(); break;
-    case 'export-csv': if (!state.busy && state.result) download('dachy-miasto-portfel.csv', portfolioCsv(evaluated, state.result, { ...state.parameters, excludedIds: state.excludedIds }, metadata, state.language), 'text/csv;charset=utf-8'); break;
-    case 'export-json': if (!state.busy && state.result) download('dachy-miasto-scenario.json', JSON.stringify({ version: 1, language: state.language, parameters: state.parameters, excludedIds: state.excludedIds, result: state.result, sensitivity: state.sensitivity, metadata, verification }, null, 2), 'application/json'); break;
-    case 'print': if (!state.busy) { state.view = 'plan'; state.mapMode = 'map'; render(); requestAnimationFrame(() => window.print()); } break;
+    case 'export-csv': if (!state.busy && state.result) download('dachy-miasta-portfel.csv', portfolioCsv(evaluated, state.result, { ...state.parameters, excludedIds: state.excludedIds }, metadata, state.language), 'text/csv;charset=utf-8'); break;
+    case 'export-json': if (!state.busy && state.result) download('dachy-miasta-scenariusz.json', JSON.stringify({ version: 2, language: state.language, parameters: state.parameters, excludedIds: state.excludedIds, result: state.result, plan: planFacts(), sensitivity: state.sensitivity, budgetCurve: state.curve, savedScenarios: state.saved, metadata, verification, context: context ? { retrievedAt: context.retrievedAt, sources: context.sources, method: context.method, stats: context.stats } : null, registers: registers ? { retrievedAt: registers.retrievedAt, sources: registers.sources, currency: registers.currency, method: registers.method, stats: registers.stats } : null, pvgis }, null, 2), 'application/json'); break;
+    case 'print': if (!state.busy) { state.view = 'plan'; state.mapMode = 'map'; render(); roofMap.fitSelected(state.result?.selectedIds || []); requestAnimationFrame(() => window.print()); } break;
   }
 });
 
@@ -132,6 +168,8 @@ app.addEventListener('change', event => {
   const el = event.target;
   if (el.id === 'language') { state.language = el.value; persist(); render(); return; }
   if (el.id === 'roof-search') return;
+  if (el.id === 'show-outside') { state.showOutside = el.checked; render(); return; }
+  if (el.id === 'data-filter') { state.dataFilter = el.value; state.page = 0; render(); document.getElementById('data-filter')?.focus(); return; }
   const next = { ...state.parameters };
   if (el.id === 'budget' || el.id === 'budget-range') next.budgetPln = Number(el.value) * 1e6;
   else if (el.dataset.param) {
@@ -148,9 +186,13 @@ try {
   const responses = await Promise.all([fetch('./data/roofs.json'), fetch('./data/reference-metadata.json')]);
   if (responses.some(r => !r.ok)) throw new Error('Dataset unavailable');
   [roofs, metadata] = await Promise.all(responses.map(r => r.json()));
-  [geometry, verification, benchmark] = await Promise.all([optionalJson('./data/msip-roofs.geojson'), optionalJson('./data/msip-verification.json'), optionalJson('./data/benchmark.json')]);
+  [geometry, verification, benchmark, context, registers, pvgis] = await Promise.all([optionalJson('./data/msip-roofs.geojson'), optionalJson('./data/msip-verification.json'), optionalJson('./data/benchmark.json'), optionalJson('./data/roof-context.json'), optionalJson('./data/roof-registers.json'), optionalJson('./data/pvgis-reference.json')]);
+  // Address, district and cultural park are joined from municipal open data by scripts/fetch-context.mjs.
+  if (context?.roofs) roofs = roofs.map(r => ({ ...r, ...(context.roofs[r.id] || {}) }));
+  // Building class, parcel ownership, heritage and RES records come from scripts/fetch-registers.mjs.
+  if (registers?.roofs) roofs = roofs.map(r => ({ ...r, ...(registers.roofs[r.id] || {}) }));
   roofMap = createRoofMap({ geometry, roofs, onSelect: selectRoof });
-  views = createViews({ state, roofs, metadata, verification, geometry, benchmark,
+  views = createViews({ state, roofs, metadata, verification, geometry, benchmark, context, registers, pvgis,
     getCalculation: () => ({ evaluated, candidates, reasons, roofById }),
     getMapLocation: id => roofMap.location(id),
   });
@@ -159,5 +201,8 @@ try {
   app.innerHTML = `<main class="boot"><h1>${t('loadError')}</h1><p>${t('launchHelp')}</p><button class="button" onclick="location.reload()">${t('retry')}</button></main>`;
 }
 
-window.addEventListener('beforeprint', () => roofMap?.resize());
+// The printed map is smaller than on screen: refit it to the plan when print styles apply.
+const fitForPrint = () => { roofMap?.resize(); if (state.view === 'plan' && state.result) roofMap?.fitSelected(state.result.selectedIds); };
+window.addEventListener('beforeprint', fitForPrint);
+window.matchMedia('print').addEventListener('change', event => { if (event.matches) fitForPrint(); else roofMap?.resize(); });
 window.addEventListener('afterprint', () => roofMap?.resize());

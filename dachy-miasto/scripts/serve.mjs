@@ -22,4 +22,4 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(error.code === 'ENOENT' ? 404 : 500); res.end('Not found');
   }
 });
-server.listen(port, '127.0.0.1', () => console.log(`Dachy Miasto · Local: http://127.0.0.1:${port}`));
+server.listen(port, '127.0.0.1', () => console.log(`Dachy Miasta · Local: http://127.0.0.1:${port}`));

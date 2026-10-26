@@ -1,5 +1,5 @@
 import { prepareCandidates } from './core/model.js';
-import { optimizePortfolio } from './core/optimizer.js';
+import { optimizePortfolio, budgetCurve, CURVE_BUDGETS_PLN } from './core/optimizer.js';
 
 self.onmessage = ({ data }) => {
   try {
@@ -22,7 +22,8 @@ self.onmessage = ({ data }) => {
       const overlap = result.selectedIds.filter(id => scenario.selectedIds.includes(id)).length;
       return { ...s, ...scenario.totals, selectedIds: scenario.selectedIds, overlap };
     });
-    self.postMessage({ id: data.id, result, sensitivity });
+    const curve = budgetCurve(candidates, [...CURVE_BUDGETS_PLN, data.parameters.budgetPln].filter(b => b > 0));
+    self.postMessage({ id: data.id, result, sensitivity, curve });
   } catch (error) {
     self.postMessage({ id: data.id, error: error.message });
   }

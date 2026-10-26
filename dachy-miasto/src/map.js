@@ -1,4 +1,4 @@
-import { translate } from './i18n.js';
+import { translate, roofLabel } from './i18n.js';
 
 export function createRoofMap({ geometry, roofs, onSelect }) {
   const L = globalThis.L;
@@ -6,20 +6,33 @@ export function createRoofMap({ geometry, roofs, onSelect }) {
   element.className = 'city-map';
   element.id = 'city-map';
   element.tabIndex = 0;
-  let language = 'ru', map, base, group, activeId, status = 'loading';
+  let language = 'pl', map, base, group, labels, activeId, showOutside = false, status = 'loading';
   const layers = new Map(), markers = new Map(), selected = new Set(), eligible = new Set();
   const t = (key, parameters) => translate(language, key, parameters);
-  const short = id => id.split('.').slice(-2).join('.').replace('_BUD', '');
 
   function paint(id) {
     const excluded = !eligible.has(id), chosen = selected.has(id), active = activeId === id;
+    // Kraków portal palette: plan roofs in city red, other eligible roofs in city blue.
     return {
-      color: active ? '#243e2d' : excluded ? '#8b958d' : chosen ? '#ad6816' : '#286245',
-      fillColor: excluded ? '#c4ccc4' : chosen ? '#ffc35f' : '#609f70',
-      fillOpacity: excluded ? 0.2 : chosen ? 0.75 : 0.4,
+      color: active ? '#071f32' : excluded ? '#8a8a8a' : chosen ? '#7d1220' : '#004c87',
+      fillColor: excluded ? '#c8c8c8' : chosen ? '#af1828' : '#0063af',
+      fillOpacity: excluded ? 0.25 : chosen ? 0.8 : 0.45,
       weight: active ? 3 : chosen ? 2 : 1,
       opacity: excluded ? 0.5 : 1,
     };
+  }
+
+  // Roofs outside the criteria are hidden unless requested; the active roof always stays visible.
+  const visible = id => showOutside || eligible.has(id) || selected.has(id) || id === activeId;
+
+  function refreshMarkers() {
+    if (!map) return;
+    const near = map.getZoom() >= 16;
+    for (const [id, marker] of markers) {
+      const show = !near && visible(id);
+      if (!show && map.hasLayer(marker)) map.removeLayer(marker);
+      else if (show && !map.hasLayer(marker)) marker.addTo(map);
+    }
   }
 
   function setStatus(next) {
@@ -58,25 +71,19 @@ export function createRoofMap({ geometry, roofs, onSelect }) {
       onEachFeature(feature, layer) {
         const id = feature.properties.ident;
         layers.set(id, layer);
-        layer.bindTooltip(() => t('roof', { id: short(id) }), { sticky: true });
+        layer.bindTooltip(() => roofLabel(language, id), { sticky: true });
         layer.on('click', event => { L.DomEvent.stopPropagation(event); onSelect(id, 'map'); });
         layer.on('add', () => { if (layer._path) layer._path.dataset.roofId = id; });
       },
     }).addTo(map);
     for (const [id, layer] of layers) {
       const marker = L.circleMarker(layer.getBounds().getCenter(), { ...paint(id), radius: 4, fillOpacity: 0.85, weight: 1.2 });
-      marker.bindTooltip(() => t('roof', { id: short(id) }));
+      marker.bindTooltip(() => roofLabel(language, id));
       marker.on('click', event => { L.DomEvent.stopPropagation(event); onSelect(id, 'map'); });
       marker.on('add', () => { if (marker._path) marker._path.dataset.roofId = id; });
       markers.set(id, marker);
     }
-    const refreshMarkers = () => {
-      const near = map.getZoom() >= 16;
-      for (const marker of markers.values()) {
-        if (near && map.hasLayer(marker)) map.removeLayer(marker);
-        else if (!near && !map.hasLayer(marker)) marker.addTo(map);
-      }
-    };
+    labels = L.layerGroup().addTo(map);
     map.on('zoomend', refreshMarkers);
     map.on('moveend zoomend', () => {
       element.dataset.zoom = map.getZoom();
@@ -101,17 +108,31 @@ export function createRoofMap({ geometry, roofs, onSelect }) {
       element.setAttribute('aria-label', t('mapHelp'));
       setStatus(status);
     },
-    update({ selectedIds, eligibleIds, roofId }) {
+    update({ selectedIds, eligibleIds, roofId, showOutside: outside = false }) {
       selected.clear(); eligible.clear();
       selectedIds.forEach(id => selected.add(id)); eligibleIds.forEach(id => eligible.add(id));
-      activeId = roofId;
+      activeId = roofId; showOutside = outside;
+      if (!map) return;
       for (const [id, layer] of layers) {
+        if (visible(id) && !group.hasLayer(layer)) group.addLayer(layer);
+        else if (!visible(id) && group.hasLayer(layer)) group.removeLayer(layer);
         layer.setStyle(paint(id));
         markers.get(id)?.setStyle({ ...paint(id), fillOpacity: 0.9 });
         markers.get(id)?.setRadius(id === activeId || selected.has(id) ? 5.5 : 3.2);
       }
+      refreshMarkers();
       layers.get(activeId)?.bringToFront();
       markers.get(activeId)?.bringToFront();
+      // Plan ranks match the numbering of the list and the printed report.
+      labels.clearLayers();
+      selectedIds.forEach((id, index) => {
+        const layer = layers.get(id);
+        if (!layer) return;
+        const label = L.marker(layer.getBounds().getCenter(), { icon: L.divIcon({ className: 'rank-label', html: String(index + 1), iconSize: [20, 20] }), keyboard: false, zIndexOffset: 500 });
+        label.on('click', event => { L.DomEvent.stopPropagation(event); onSelect(id, 'map'); });
+        label.bindTooltip(() => roofLabel(language, id), { direction: 'top', offset: [0, -8] });
+        labels.addLayer(label);
+      });
     },
     focus(id) {
       const layer = layers.get(id);
