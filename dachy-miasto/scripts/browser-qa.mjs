@@ -6,13 +6,15 @@ import assert from 'node:assert/strict';
 
 const browser = process.env.QA_BROWSER || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
 const offline = process.argv.includes('--offline');
+const urlAt = process.argv.indexOf('--url');
+const targetUrl = urlAt >= 0 ? process.argv[urlAt + 1] : 'http://127.0.0.1:4173/';
 const output = fileURLToPath(new URL('../.preview/', import.meta.url));
 await fs.mkdir(output, { recursive: true });
 const profile = await fs.mkdtemp(path.join(output, 'chrome-'));
 const processHandle = spawn(browser, [
   '--headless=new', '--no-first-run', '--no-default-browser-check', '--disable-background-networking',
   '--disable-extensions', '--disable-sync', '--remote-debugging-port=0',
-  `--user-data-dir=${profile}`, '--window-size=1440,1050', 'http://127.0.0.1:4173/',
+  `--user-data-dir=${profile}`, '--window-size=1440,1050', targetUrl,
 ], { windowsHide: true, stdio: ['ignore', 'ignore', 'pipe'] });
 const browserLogs = [];
 processHandle.stderr.on('data', chunk => browserLogs.push(chunk.toString()));
@@ -91,6 +93,9 @@ try {
   // Polish is the default for the contest; the remaining checks run in Russian, the team's working language.
   assert.match(initial.geometry, /Kraków/);
   assert.equal(initial.language, 'pl');
+  // Numerical explanation of the selected roof forecast.
+  assert.ok(await evaluate(`document.querySelector('.numeric-formula').textContent.includes('×')`));
+  assert.ok(await evaluate(`document.querySelector('.explain-panel').textContent.includes('sumapc')`));
   await click('[data-language="ru"]');
   assert.match(await evaluate(`document.querySelector('.map-label strong').textContent`), /Краков/);
   const clickedRoof = await evaluate(`{ const el=document.querySelector('#city-map [data-roof-id]'); const id=el.dataset.roofId; el.dispatchEvent(new MouseEvent('click',{bubbles:true})); id; }`);
@@ -158,6 +163,38 @@ try {
   await set('#data-filter', 'all');
   await click('.main-nav [data-view="method"]');
   assert.ok(await evaluate('document.querySelector("main").textContent.includes("Динамическое программирование")'));
+  assert.ok(await evaluate(`document.querySelector('.source-explainer').textContent.includes('лазерному сканированию')`));
+  await click('.main-nav [data-view="monitor"]');
+  assert.ok(await evaluate(`document.querySelector('main').textContent.includes('Измерения пока не подключены')`));
+  await click('[data-action="monitor-example"]');
+  assert.ok(await evaluate(`document.querySelector('.monitor-record').textContent.includes('искусственные данные')`));
+  assert.ok(await evaluate(`Boolean(document.querySelector('.power-chart polyline'))`));
+  assert.equal(await evaluate(`document.querySelector('.financial-value').textContent`), '—');
+  await click('[data-action="monitor-export"]');
+  assert.equal(JSON.parse(await evaluate('globalThis.lastExport.text()')).mode, 'example');
+  await click('[data-language="pl"]');
+  assert.ok(await evaluate(`document.querySelector('.monitor-record').textContent.includes('dane sztuczne')`));
+  await click('[data-language="ru"]');
+  const monitorShot = await call('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true });
+  await fs.writeFile(path.join(output, 'monitoring-example.png'), Buffer.from(monitorShot.data, 'base64'));
+  await evaluate(`{
+    const record = { schemaVersion:1, mode:'recording', installation:{id:'qa-synthetic-fixture',name:'QA synthetic import',kind:'pv',measurementPoint:'ac-output',location:{latitude:50.05,longitude:19.95}},samples:[{timestamp:'2026-10-26T10:00:00Z',powerW:360000,selfConsumedPowerW:216000,exportPowerW:144000},{timestamp:'2026-10-26T10:00:10Z',powerW:360000,selfConsumedPowerW:216000,exportPowerW:144000}] };
+    const transfer = new DataTransfer(); transfer.items.add(new File([JSON.stringify(record)],'qa.json',{type:'application/json'}));
+    const input = document.querySelector('#measurement-file'); input.files = transfer.files; input.dispatchEvent(new Event('change',{bubbles:true}));
+  }`);
+  await waitFor(`document.querySelector('.monitor-record h2').textContent.includes('QA synthetic import')`);
+  await set('#monitor-buyRatePln', 1); await set('#monitor-sellRatePln', 0.3);
+  assert.ok(await evaluate(`document.querySelector('.financial-value').textContent.includes('0,72')`));
+  await click('[data-action="monitor-map"]');
+  assert.ok(await evaluate(`Boolean(document.querySelector('[data-installation-id="qa-synthetic-fixture"]'))`));
+  // A real press and release: after the earlier drag Leaflet ignores a click event without mousedown.
+  const marker = await evaluate(`{ document.querySelector('#city-map').scrollIntoView({ block: 'center' }); const r=document.querySelector('[data-installation-id="qa-synthetic-fixture"]').getBoundingClientRect(); ({x:r.x+r.width/2,y:r.y+r.height/2}); }`);
+  await call('Input.dispatchMouseEvent', { type: 'mousePressed', x: marker.x, y: marker.y, button: 'left', buttons: 1, clickCount: 1 });
+  await call('Input.dispatchMouseEvent', { type: 'mouseReleased', x: marker.x, y: marker.y, button: 'left', buttons: 0, clickCount: 1 });
+  await waitFor(`Boolean(document.querySelector('.monitor-record'))`);
+  assert.ok(await evaluate(`Boolean(document.querySelector('.monitor-record'))`));
+  await click('[data-action="monitor-clear"]');
+  assert.ok(await evaluate(`document.querySelector('main').textContent.includes('Измерения пока не подключены')`));
   await click('.main-nav [data-view="plan"]');
   await click('[data-action="reset"]'); await ready();
   await evaluate(`{ const el = document.querySelector('[data-param="onlyGreen"]'); el.checked = true; el.dispatchEvent(new Event('change', {bubbles:true})); }`);
@@ -198,6 +235,8 @@ try {
   const mobile = await call('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true });
   await fs.writeFile(path.join(output, 'mobile.png'), Buffer.from(mobile.data, 'base64'));
   const report = { offline, initial, checks: [offline ? 'street tiles intentionally blocked' : 'street tiles', 'Polish default without Cyrillic', 'text size and contrast version', 'budget curve', 'approval routes', 'saved variants', 'cap removal and concentration warning', 'roof evidence statuses', 'data filter and sort', '15-roof review CSV RU/PL', 'roof click and summary', 'wheel zoom', 'mouse drag', 'viewport preserved across recalculation', 'roof focus', 'zero budget', 'budget recalculation', 'exclude and restore', 'Russian CSV', 'RU/PL switch', 'data search', 'method view', 'green filter', 'offline basemap fallback', 'print report and PDF', 'mobile overflow'], runtimeErrors: errors };
+  report.version = '0.6.0';
+  report.checks.push('numerical forecast explanation', 'source methodology', 'monitoring empty state', 'explicit synthetic example and chart', 'monitoring RU/PL', 'recording export', 'measurement file import', 'separate self-use and export financial estimate', 'imported installation map marker', 'clear imported data');
   await fs.writeFile(path.join(output, 'browser-qa.json'), JSON.stringify(report, null, 2));
   assert.deepEqual(errors, []);
   console.log(JSON.stringify(report, null, 2));

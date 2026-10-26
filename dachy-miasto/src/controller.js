@@ -4,10 +4,12 @@ import { createReviewSample, reviewCsv } from './core/review.js';
 import { translate } from './i18n.js';
 import { createViews } from './views.js';
 import { createRoofMap } from './map.js';
+import { parseMeasurements, summarizeMeasurements, createExampleMeasurements, connectionStatus } from './core/monitoring.js';
+import { createBenchSerial } from './serial.js';
 
 const app = document.getElementById('app');
 const SCENARIOS_KEY = 'dachy-miasto-scenarios', MAX_SCENARIOS = 4;
-const state = { parameters: { ...DEFAULTS }, excludedIds: [], language: 'pl', view: 'plan', mapMode: 'map', roofId: null, advanced: false, search: '', page: 0, busy: true, error: '', result: null, sensitivity: [], curve: [], saved: [], dataFilter: 'all', sort: { key: 'energy', dir: 'desc' }, showOutside: false, fontSize: 1, theme: 'basic' };
+const state = { parameters: { ...DEFAULTS }, excludedIds: [], language: 'pl', view: 'plan', mapMode: 'map', roofId: null, advanced: false, search: '', page: 0, busy: true, error: '', result: null, sensitivity: [], curve: [], saved: [], dataFilter: 'all', sort: { key: 'energy', dir: 'desc' }, showOutside: false, fontSize: 1, theme: 'basic', showOze: false };
 try {
   const stored = JSON.parse(localStorage.getItem('dachy-miasto-v1') || 'null');
   if (stored) {
@@ -31,6 +33,37 @@ let evaluated = [], candidates = [], reasons = {}, roofById = new Map(), job = 0
 const worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
 const optionalJson = async url => { try { const response = await fetch(url); return response.ok ? await response.json() : null; } catch { return null; } };
 
+const monitoring = { record: null, connected: false, lastReceivedAt: null, error: '', settings: { maxGapSeconds: 30, buyRatePln: null, sellRatePln: null } };
+let renderedConnection = 'disconnected';
+const serial = createBenchSerial({
+  onState(connected) {
+    monitoring.connected = connected;
+    if (connected) {
+      monitoring.lastReceivedAt = null; monitoring.error = '';
+      monitoring.record = { schemaVersion: 1, mode: 'recording', installation: { id: 'usb-bench', name: t('serialTitle'), kind: 'bench', measurementPoint: 'dc-load', location: null, sourceUrl: null }, samples: [] };
+    }
+    render();
+  },
+  onSample(sample) {
+    const samples = monitoring.record.samples;
+    if (samples.length >= 20000) { monitoring.error = 'serialLimit'; return; }
+    if (samples.length && Date.parse(sample.timestamp) <= Date.parse(samples.at(-1).timestamp)) return;
+    samples.push(sample); monitoring.lastReceivedAt = Date.now(); monitoring.error = '';
+  },
+  onError(key) { monitoring.error = key; render(); },
+});
+function getMonitoring() {
+  return { ...monitoring, serialSupported: serial.supported,
+    connection: connectionStatus(monitoring.connected, monitoring.lastReceivedAt),
+    summary: monitoring.record ? summarizeMeasurements(monitoring.record, monitoring.settings) : null };
+}
+setInterval(() => {
+  if (!monitoring.connected || state.view !== 'monitor') return;
+  const connection = connectionStatus(monitoring.connected, monitoring.lastReceivedAt);
+  // Keep numeric edits stable, but always remove a stale "live" label on time.
+  if (document.activeElement?.tagName !== 'INPUT' || connection !== renderedConnection) render();
+}, 1000);
+
 function persist() {
   try {
     localStorage.setItem('dachy-miasto-v1', JSON.stringify({ parameters: state.parameters, excludedIds: state.excludedIds }));
@@ -42,6 +75,7 @@ function persist() {
 
 function render() {
   if (!views) return;
+  if (state.view === 'monitor') renderedConnection = connectionStatus(monitoring.connected, monitoring.lastReceivedAt);
   app.innerHTML = views.html();
   document.documentElement.lang = state.language;
   document.documentElement.dataset.size = state.fontSize;
@@ -52,7 +86,7 @@ function render() {
   const host = app.querySelector('.map-host');
   if (host) {
     roofMap.mount(host, state.language);
-    roofMap.update({ selectedIds: state.result?.selectedIds || [], eligibleIds: candidates.map(r => r.id), roofId: state.roofId, showOutside: state.showOutside });
+    roofMap.update({ selectedIds: state.result?.selectedIds || [], eligibleIds: candidates.map(r => r.id), roofId: state.roofId, showOutside: state.showOutside, ozeVisible: state.showOze, installation: monitoring.record });
   }
   document.getElementById('advanced')?.addEventListener('toggle', event => { state.advanced = event.target.open; });
 }
@@ -119,6 +153,12 @@ app.addEventListener('click', event => {
   const button = event.target.closest('[data-action]');
   if (!button || button.disabled) return;
   switch (button.dataset.action) {
+    case 'monitor-example': if (!monitoring.connected) { monitoring.record = createExampleMeasurements(); monitoring.error = ''; render(); } break;
+    case 'monitor-clear': if (!monitoring.connected) { monitoring.record = null; monitoring.error = ''; render(); } break;
+    case 'monitor-export': if (monitoring.record?.samples.length >= 2) download('dachy-measurements.json', JSON.stringify(monitoring.record, null, 2), 'application/json'); break;
+    case 'serial-connect': serial.connect(); break;
+    case 'serial-disconnect': serial.disconnect(); break;
+    case 'monitor-map': state.view = 'plan'; state.mapMode = 'map'; render(); roofMap.focusInstallation(); document.querySelector('.map-panel')?.scrollIntoView({ block: 'nearest' }); break;
     case 'export-review': {
       const sample = createReviewSample(roofs, state.result?.selectedIds || [], geometry);
       download(`dachy-review-${state.language}.csv`, reviewCsv(sample, state.language), 'text/csv;charset=utf-8');
@@ -164,8 +204,23 @@ app.addEventListener('input', event => {
   }
 });
 
-app.addEventListener('change', event => {
+app.addEventListener('change', async event => {
   const el = event.target;
+  if (el.id === 'oze-layer') { state.showOze = el.checked; render(); return; }
+  if (el.id === 'measurement-file') {
+    if (monitoring.connected || !el.files?.[0]) return;
+    const file = el.files[0];
+    if (file.size > 5 * 1024 * 1024) { monitoring.error = 'measurementTooLarge'; render(); return; }
+    try { const record = parseMeasurements(await file.text()); if (!monitoring.connected) { monitoring.record = record; monitoring.error = ''; } }
+    catch { monitoring.error = 'measurementInvalid'; }
+    render(); return;
+  }
+  if (el.dataset.monitorParam) {
+    if (!el.checkValidity()) { el.reportValidity(); return; }
+    const value = el.value === '' ? null : Number(el.value);
+    if (el.dataset.monitorParam === 'maxGapSeconds' && (value == null || value <= 0)) { el.value = monitoring.settings.maxGapSeconds; return; }
+    monitoring.settings[el.dataset.monitorParam] = value; render(); return;
+  }
   if (el.id === 'language') { state.language = el.value; persist(); render(); return; }
   if (el.id === 'roof-search') return;
   if (el.id === 'show-outside') { state.showOutside = el.checked; render(); return; }
@@ -191,10 +246,11 @@ try {
   if (context?.roofs) roofs = roofs.map(r => ({ ...r, ...(context.roofs[r.id] || {}) }));
   // Building class, parcel ownership, heritage and RES records come from scripts/fetch-registers.mjs.
   if (registers?.roofs) roofs = roofs.map(r => ({ ...r, ...(registers.roofs[r.id] || {}) }));
-  roofMap = createRoofMap({ geometry, roofs, onSelect: selectRoof });
+  roofMap = createRoofMap({ geometry, roofs, onSelect: selectRoof, onInstallationSelect: () => { state.view = 'monitor'; render(); } });
   views = createViews({ state, roofs, metadata, verification, geometry, benchmark, context, registers, pvgis,
     getCalculation: () => ({ evaluated, candidates, reasons, roofById }),
     getMapLocation: id => roofMap.location(id),
+    getMonitoring,
   });
   recalculate();
 } catch {

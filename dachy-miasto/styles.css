@@ -415,3 +415,50 @@ html[data-theme="contrast"] .check-icon{border:1px solid #ff0;background:#000;co
 .panel-title{flex-wrap:wrap}
 .panel-title .tag{white-space:normal}
 .algorithm-note{overflow-x:auto}
+
+/* Forecast explanation, city RES layer and measured data (monitoring), in the city portal palette. */
+.decision-purpose{max-width:60rem;margin:-.5rem 0 1.25rem;font-size:.9375rem;line-height:1.65;color:var(--muted)}
+.explain-content{padding:1.1rem 1.25rem}
+.explain-content h3{margin:0 0 .6rem;font-size:.9375rem;font-weight:900;color:var(--navy)}
+.explain-content p,.explain-content a,.explain-content summary{font-size:.875rem;line-height:1.65}
+.explain-content p{color:var(--muted)}
+.explain-content summary{font-weight:700;color:var(--blue);cursor:pointer}
+.explain-columns{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem}
+.explain-columns dl{margin:0 0 1rem;font-size:.875rem;line-height:1.55}
+.explain-columns dl>div{margin-bottom:.6rem}
+.explain-columns dt{color:var(--muted)}
+.explain-columns dt code{padding:0 .25rem;background:var(--surface-alt);font-size:.75rem}
+.explain-columns dd{margin:.15rem 0 0;font-weight:700;color:var(--navy);overflow-wrap:anywhere}
+.numeric-formula{padding:.75rem .85rem;background:var(--surface-alt);border-left:4px solid var(--blue);color:var(--navy)!important;font-variant-numeric:tabular-nums}
+.source-explainer{margin-bottom:1.5rem}
+.oze-controls{padding:.6rem 1rem;border-bottom:1px solid var(--line)}
+.oze-controls .check-label{margin:0 0 .3rem;font-size:.875rem}
+.oze-controls small{display:block;font-size:.8125rem;line-height:1.55;color:var(--muted)}
+.oze-network-status{position:absolute;z-index:450;top:4.75rem;left:.9rem;right:4rem;max-width:21rem;padding:.5rem .65rem;background:var(--overlay);border:1px solid var(--line-strong);border-left:4px solid var(--blue);font-size:.8125rem;line-height:1.5;pointer-events:none}
+.oze-network-status.failed{background:var(--warn-tint);border-left-color:var(--warn-line)}
+.oze-network-status[hidden]{display:none}
+.monitor-controls{display:flex;flex-wrap:wrap;gap:.6rem}
+.monitor-controls label{position:relative;overflow:hidden;cursor:pointer}
+.monitor-controls input[type=file]{position:absolute;inset:0;width:100%;opacity:0;cursor:pointer}
+.monitor-controls label:focus-within{outline:3px solid var(--focus);outline-offset:2px}
+.monitor-controls .disabled{opacity:.5;cursor:default}
+.monitor-local{margin:.8rem 0 1.4rem;font-size:.875rem;line-height:1.6;color:var(--muted)}
+.monitor-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:1.5rem}
+.monitor-stack{display:grid;gap:1.5rem;align-content:start}
+.monitor-record-heading{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:.75rem}
+.monitor-record-heading h2{overflow-wrap:anywhere}
+.monitor-record-heading .tag{white-space:normal;line-height:1.5}
+.power-chart{margin:1.25rem 0;color:var(--blue)}
+.power-chart figcaption{margin-bottom:.75rem;font-size:.875rem;font-weight:700;color:var(--navy)}
+.power-chart svg{width:100%;height:auto;min-height:7.5rem}
+.power-chart path{stroke:var(--line-strong)}
+.power-chart text{font-size:10px;fill:var(--muted)}
+.chart-dates{display:flex;justify-content:space-between;gap:1rem;font-size:.8125rem;color:var(--muted)}
+.monitor-settings{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.monitor-settings .field{margin:0}
+.financial-value{margin:1.1rem 0;font-size:2rem;font-weight:900;color:var(--navy);font-variant-numeric:tabular-nums}
+.monitor-record .button{margin:.75rem .75rem 0 0}
+.notice.error{background:var(--red-tint);border-left-color:var(--red);color:var(--red)}
+@media(max-width:900px){.monitor-grid{grid-template-columns:1fr}.explain-columns{grid-template-columns:1fr;gap:0}}
+@media(max-width:600px){.monitor-settings{grid-template-columns:1fr}.monitor-grid{gap:1rem}.chart-dates{font-size:.75rem}.main-nav button{font-size:.75rem;padding:0 .25rem}}
+@media print{.oze-controls,.oze-network-status,.monitor-controls,.decision-purpose{display:none!important}.explain-panel{break-inside:avoid}}

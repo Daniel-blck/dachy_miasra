@@ -1,4 +1,7 @@
+import { EXTRA_MESSAGES } from './i18n-extra.js';
+
 const entries = [
+  ...EXTRA_MESSAGES,
   ['title', 'Dachy Miasta · План инвестиций', 'Dachy Miasta · Plan inwestycji PV'],
   ['description', 'Выбор крыш Кракова для солнечных панелей: бюджет, карта и сравнение вариантов.', 'Wybór dachów w Krakowie pod instalacje fotowoltaiczne: budżet, mapa i porównanie wariantów.'],
   ['skip', 'Перейти к содержимому', 'Przejdź do treści'],
@@ -330,6 +333,7 @@ const entries = [
   ['themeContrast', 'Контрастная версия', 'Wersja kontrastowa'],
   ['breadcrumbLabel', 'Навигационная цепочка', 'Ścieżka nawigacji'],
   ['notOfficial', 'Конкурсный прототип независимой команды — не официальный сервис мэрии Кракова.', 'Prototyp konkursowy niezależnego zespołu — nie jest oficjalnym serwisem Urzędu Miasta Krakowa.'],
+  ['explainCapped', 'Установка уменьшена до предела: {capacity} кВтп из возможных {potential} кВтп, поэтому выработка в сценарии — {energy} кВт·ч/год.', 'Instalacja zmniejszona do limitu: {capacity} kWp z możliwych {potential} kWp, dlatego produkcja w scenariuszu wynosi {energy} kWh/rok.'],
 ];
 
 export const LOCALES = { ru: 'ru-RU', pl: 'pl-PL' };
