@@ -1,7 +1,9 @@
 import { EXTRA_MESSAGES } from './i18n-extra.js';
+import { SIMULATION_MESSAGES } from './i18n-simulation.js';
 
 const entries = [
   ...EXTRA_MESSAGES,
+  ...SIMULATION_MESSAGES,
   ['title', 'Dachy Miasto · План инвестиций', 'Dachy Miasto · Plan inwestycji'],
   ['description', 'Выбор крыш Кракова для солнечных панелей: бюджет, карта и сравнение вариантов.', 'Wybór dachów Krakowa pod instalacje PV: budżet, mapa i porównanie wariantów.'],
   ['skip', 'Перейти к содержимому', 'Przejdź do treści'],

@@ -1,6 +1,7 @@
 import { translate, LOCALES } from './i18n.js';
 import { OWNERSHIP_SOURCE } from './core/review.js';
 import { createMonitoringView } from './monitoring-view.js';
+import { createSimulationView } from './simulation-view.js';
 
 export const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const drawings = {
@@ -21,7 +22,7 @@ const drawings = {
 const icon = name => `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">${drawings[name] || drawings.roof}</svg>`;
 const shortId = id => id?.split('.').slice(-2).join('.').replace('_BUD', '') || '—';
 
-export function createViews({ state, roofs, metadata, verification, geometry, benchmark, getCalculation, getMapLocation, getMonitoring = () => ({ record: null, summary: null, connected: false, error: '', settings: { maxGapSeconds: 30 }, serialSupported: false }) }) {
+export function createViews({ state, roofs, metadata, verification, geometry, benchmark, getCalculation, getMapLocation, getMonitoring = () => ({ record: null, summary: null, connected: false, error: '', settings: { maxGapSeconds: 30 }, serialSupported: false }), getSimulation = () => null }) {
   const geometryIds = new Set(geometry?.features.map(f => f.properties.ident) || []);
   const t = (key, p) => translate(state.language, key, p);
   const fmt = (v, digits = 0) => Number(v).toLocaleString(LOCALES[state.language], { maximumFractionDigits: digits, minimumFractionDigits: digits });
@@ -31,6 +32,9 @@ export function createViews({ state, roofs, metadata, verification, geometry, be
   const kpi = (label, value, unit, note, symbol, focus = false) => `<div class="kpi ${focus ? 'focus' : ''}"><div class="kpi-label">${label}${icon(symbol)}</div><div class="kpi-value">${value}<small>${unit}</small></div><div class="kpi-note">${note}</div></div>`;
   const monitoringView = createMonitoringView({ getMonitoring, t, fmt, esc, icon, heading, kpi,
     formatDate: value => new Date(value).toLocaleString(LOCALES[state.language]),
+  });
+  const simulationView = createSimulationView({ t, fmt, esc, heading, getSimulation,
+    getSelectedRoof: () => getCalculation().roofById.get(state.roofId) || getCalculation().evaluated[0],
   });
 
   function explanationPanel() {
@@ -112,7 +116,7 @@ export function createViews({ state, roofs, metadata, verification, geometry, be
       [t('roofEnergy'), `${fmt(roof.annualEnergyKwh / 1000, 1)} ${t('mwhYear')}`],
       [t('roofCost'), `${fmt(roof.costPln)} zł`],
       [t('roofRatio'), `${fmt(roof.kwhPerThousandPln)} ${t('kwhYear')}`],
-    ].map(([label, value]) => `<div class="fact"><span>${label}</span><strong>${value}</strong></div>`).join('')}<div class="detail-reason">${reason}</div>${evidencePanel(roof)}<p class="detail-warnings">${roof.greenRoofPotential ? t('greenFlag') : ''}${roof.investmentLabel ? t('investmentFlag', { label: esc(roof.investmentLabel) }) : ''}${t('roofWarning')}</p>${location ? `<a class="location-link" href="${location.url}" target="_blank" rel="noopener">${t('openOsm')}</a>` : ''}<button class="button ${excluded ? '' : 'danger'}" data-action="exclude" data-id="${esc(roof.id)}">${t(excluded ? 'restore' : 'exclude')}${icon('arrow')}</button></div>`;
+    ].map(([label, value]) => `<div class="fact"><span>${label}</span><strong>${value}</strong></div>`).join('')}<div class="detail-reason">${reason}</div>${evidencePanel(roof)}<button class="button simulation-launch" data-action="simulate-roof" data-id="${esc(roof.id)}">${icon('sun')}${t('simCreate')}</button><p class="detail-warnings">${roof.greenRoofPotential ? t('greenFlag') : ''}${roof.investmentLabel ? t('investmentFlag', { label: esc(roof.investmentLabel) }) : ''}${t('roofWarning')}</p>${location ? `<a class="location-link" href="${location.url}" target="_blank" rel="noopener">${t('openOsm')}</a>` : ''}<button class="button ${excluded ? '' : 'danger'}" data-action="exclude" data-id="${esc(roof.id)}">${t(excluded ? 'restore' : 'exclude')}${icon('arrow')}</button></div>`;
   }
 
   function portfolioPanel() {
@@ -147,9 +151,10 @@ export function createViews({ state, roofs, metadata, verification, geometry, be
 
   return {
     t,
+    simulationFrame: simulationView.frame,
     html() {
       const active = state.view;
-      return `<div class="shell ${state.busy ? 'calculating' : ''}"><nav class="rail" aria-label="${t('navigation')}"><div class="rail-logo" aria-hidden="true">${icon('roof')}</div>${[['plan', 'grid'], ['monitor', 'sun'], ['data', 'layers'], ['method', 'book']].map(([id, symbol]) => `<button data-view="${id}" class="${active === id ? 'active' : ''}" ${active === id ? 'aria-current="page"' : ''}>${icon(symbol)}<span>${t(id)}</span></button>`).join('')}<div class="rail-foot">DACHY MIASTO / OPEN DATA</div></nav><div class="workspace"><header class="topbar"><div class="brand"><div class="brand-icon">${icon('roof')}</div><div><strong>Dachy Miasto</strong><small>${t('tagline')}</small></div></div><div class="top-actions"><span class="city-label">${icon('pin')}${t('city')}</span><label class="language-control"><span class="sr-only">${t('language')}</span><select id="language" aria-label="${t('language')}"><option value="ru" ${state.language === 'ru' ? 'selected' : ''}>RU</option><option value="pl" ${state.language === 'pl' ? 'selected' : ''}>PL</option></select></label><button class="button" data-action="print" ${state.busy ? 'disabled' : ''}>${icon('print')}<span class="button-label">${t('pdf')}</span><span class="button-short">PDF</span></button><button class="button primary" data-action="export-csv" ${state.busy || !state.result ? 'disabled' : ''}>${icon('download')}<span class="button-label">${t('csv')}</span><span class="button-short">CSV</span></button></div></header><main id="main">${active === 'data' ? dataView() : active === 'method' ? methodView() : active === 'monitor' ? monitoringView() : planView()}<footer class="footer"><span>${t('footer')}</span><span>${t('footerLimits')} <button data-view="method">${t('sourcesLink')}</button></span></footer></main></div></div>`;
+      return `<div class="shell ${state.busy ? 'calculating' : ''}"><nav class="rail" aria-label="${t('navigation')}"><div class="rail-logo" aria-hidden="true">${icon('roof')}</div>${[['plan', 'grid'], ['simulation', 'chart'], ['monitor', 'sun'], ['data', 'layers'], ['method', 'book']].map(([id, symbol]) => `<button data-view="${id}" class="${active === id ? 'active' : ''}" ${active === id ? 'aria-current="page"' : ''}>${icon(symbol)}<span>${t(id)}</span></button>`).join('')}<div class="rail-foot">DACHY MIASTO / OPEN DATA</div></nav><div class="workspace"><header class="topbar"><div class="brand"><div class="brand-icon">${icon('roof')}</div><div><strong>Dachy Miasto</strong><small>${t('tagline')}</small></div></div><div class="top-actions"><span class="city-label">${icon('pin')}${t('city')}</span><label class="language-control"><span class="sr-only">${t('language')}</span><select id="language" aria-label="${t('language')}"><option value="ru" ${state.language === 'ru' ? 'selected' : ''}>RU</option><option value="pl" ${state.language === 'pl' ? 'selected' : ''}>PL</option></select></label><button class="button" data-action="print" ${state.busy ? 'disabled' : ''}>${icon('print')}<span class="button-label">${t('pdf')}</span><span class="button-short">PDF</span></button><button class="button primary" data-action="export-csv" ${state.busy || (active === 'simulation' ? !getSimulation() : !state.result) ? 'disabled' : ''}>${icon('download')}<span class="button-label">${t('csv')}</span><span class="button-short">CSV</span></button></div></header><main id="main">${active === 'data' ? dataView() : active === 'method' ? methodView() : active === 'monitor' ? monitoringView() : active === 'simulation' ? simulationView.html() : planView()}<footer class="footer"><span>${t('footer')}</span><span>${t('footerLimits')} <button data-view="method">${t('sourcesLink')}</button></span></footer></main></div></div>`;
     },
   };
 }

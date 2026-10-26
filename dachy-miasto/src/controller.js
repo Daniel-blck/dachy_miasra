@@ -6,6 +6,7 @@ import { createViews } from './views.js';
 import { createRoofMap } from './map.js';
 import { parseMeasurements, summarizeMeasurements, createExampleMeasurements, connectionStatus } from './core/monitoring.js';
 import { createBenchSerial } from './serial.js';
+import { createRoofSimulation, advanceSimulation, configureSimulation, resetSimulation, DAY_SECONDS, simulationArchive, simulationCsv } from './core/simulation.js';
 
 const app = document.getElementById('app');
 const state = { parameters: { ...DEFAULTS }, excludedIds: [], language: 'ru', view: 'plan', mapMode: 'map', roofId: null, advanced: false, search: '', page: 0, busy: true, error: '', result: null, sensitivity: [], showOze: false };
@@ -28,6 +29,45 @@ const worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'modu
 const optionalJson = async url => { try { const response = await fetch(url); return response.ok ? await response.json() : null; } catch { return null; } };
 const monitoring = { record: null, connected: false, lastReceivedAt: null, error: '', settings: { maxGapSeconds: 30, buyRatePln: null, sellRatePln: null } };
 let renderedConnection = 'disconnected';
+let roofSimulation = null, simulationTickAt = 0;
+
+function synchronizeSimulationClock() {
+  const now = performance.now();
+  if (roofSimulation?.running) advanceSimulation(roofSimulation, Math.max(0, now - simulationTickAt) / 1000 * roofSimulation.speed);
+  simulationTickAt = now;
+}
+
+function pauseRoofSimulation() {
+  synchronizeSimulationClock();
+  if (roofSimulation) roofSimulation.running = false;
+}
+
+function refreshSimulationFrame() {
+  const frame = document.getElementById('simulation-frame');
+  if (!frame || !roofSimulation) return;
+  frame.innerHTML = views.simulationFrame();
+  const start = app.querySelector('[data-action="simulation-start"]'), pause = app.querySelector('[data-action="simulation-pause"]');
+  if (start) start.disabled = roofSimulation.running || roofSimulation.timeSeconds >= DAY_SECONDS;
+  if (pause) pause.disabled = !roofSimulation.running;
+}
+
+function beginRoofSimulation(id = state.roofId) {
+  const roof = roofById.get(id) || evaluated[0];
+  if (!roof) return;
+  roofSimulation = createRoofSimulation(roof, state.parameters, roofMap.location(roof.id));
+  simulationTickAt = performance.now();
+  state.view = 'simulation'; render();
+}
+
+setInterval(() => {
+  if (!roofSimulation?.running) return;
+  if (document.hidden || state.view !== 'simulation') pauseRoofSimulation();
+  else synchronizeSimulationClock();
+  refreshSimulationFrame();
+}, 250);
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && roofSimulation?.running) { pauseRoofSimulation(); refreshSimulationFrame(); }
+});
 const serial = createBenchSerial({
   onState(connected) {
     monitoring.connected = connected;
@@ -66,6 +106,7 @@ function persist() {
 
 function render() {
   if (!views) return;
+  if (state.view !== 'simulation' && roofSimulation?.running) pauseRoofSimulation();
   if (state.view === 'monitor') renderedConnection = connectionStatus(monitoring.connected, monitoring.lastReceivedAt);
   app.innerHTML = views.html();
   document.documentElement.lang = state.language;
@@ -75,7 +116,7 @@ function render() {
   const host = app.querySelector('.map-host');
   if (host) {
     roofMap.mount(host, state.language);
-    roofMap.update({ selectedIds: state.result?.selectedIds || [], eligibleIds: candidates.map(r => r.id), roofId: state.roofId, ozeVisible: state.showOze, installation: monitoring.record });
+    roofMap.update({ selectedIds: state.result?.selectedIds || [], eligibleIds: candidates.map(r => r.id), roofId: state.roofId, ozeVisible: state.showOze, installation: monitoring.record, simulation: roofSimulation });
   }
   document.getElementById('advanced')?.addEventListener('toggle', event => { state.advanced = event.target.open; });
 }
@@ -125,6 +166,16 @@ app.addEventListener('click', event => {
   const button = event.target.closest('[data-action]');
   if (!button || button.disabled) return;
   switch (button.dataset.action) {
+    case 'simulate-roof': beginRoofSimulation(button.dataset.id); break;
+    case 'simulation-create': beginRoofSimulation(); break;
+    case 'simulation-start': if (roofSimulation && roofSimulation.timeSeconds < DAY_SECONDS) { simulationTickAt = performance.now(); roofSimulation.running = true; refreshSimulationFrame(); } break;
+    case 'simulation-pause': pauseRoofSimulation(); refreshSimulationFrame(); break;
+    case 'simulation-reset': if (roofSimulation) { resetSimulation(roofSimulation); simulationTickAt = performance.now(); render(); } break;
+    case 'simulation-scenario': if (roofSimulation) { synchronizeSimulationClock(); configureSimulation(roofSimulation, { scenario: button.dataset.scenario }); render(); } break;
+    case 'simulation-choose': state.view = 'plan'; state.mapMode = 'map'; render(); roofMap.fitAll(); break;
+    case 'simulation-map': if (roofSimulation) state.roofId = roofSimulation.roof.id; state.view = 'plan'; state.mapMode = 'map'; render(); roofMap.focusSimulation(); document.querySelector('.map-panel')?.scrollIntoView({ block: 'nearest' }); break;
+    case 'simulation-json': if (roofSimulation) { synchronizeSimulationClock(); download('dachy-simulation.json', JSON.stringify(simulationArchive(roofSimulation), null, 2), 'application/json'); refreshSimulationFrame(); } break;
+    case 'simulation-csv': if (roofSimulation) { synchronizeSimulationClock(); download(`dachy-simulation-${state.language}.csv`, simulationCsv(roofSimulation, state.language), 'text/csv;charset=utf-8'); refreshSimulationFrame(); } break;
     case 'monitor-example': if (!monitoring.connected) { monitoring.record = createExampleMeasurements(); monitoring.error = ''; render(); } break;
     case 'monitor-clear': if (!monitoring.connected) { monitoring.record = null; monitoring.error = ''; render(); } break;
     case 'monitor-export': if (monitoring.record?.samples.length >= 2) download('dachy-measurements.json', JSON.stringify(monitoring.record, null, 2), 'application/json'); break;
@@ -149,9 +200,17 @@ app.addEventListener('click', event => {
     case 'show-details': document.getElementById('roof-details')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); break;
     case 'prev-page': state.page = Math.max(0, state.page - 1); render(); break;
     case 'next-page': state.page++; render(); break;
-    case 'export-csv': if (!state.busy && state.result) download('dachy-miasto-portfel.csv', portfolioCsv(evaluated, state.result, { ...state.parameters, excludedIds: state.excludedIds }, metadata, state.language), 'text/csv;charset=utf-8'); break;
+    case 'export-csv':
+      if (state.view === 'simulation') {
+        if (roofSimulation) { synchronizeSimulationClock(); download(`dachy-simulation-${state.language}.csv`, simulationCsv(roofSimulation, state.language), 'text/csv;charset=utf-8'); refreshSimulationFrame(); }
+      } else if (!state.busy && state.result) download('dachy-miasto-portfel.csv', portfolioCsv(evaluated, state.result, { ...state.parameters, excludedIds: state.excludedIds }, metadata, state.language), 'text/csv;charset=utf-8');
+      break;
     case 'export-json': if (!state.busy && state.result) download('dachy-miasto-scenario.json', JSON.stringify({ version: 1, language: state.language, parameters: state.parameters, excludedIds: state.excludedIds, result: state.result, sensitivity: state.sensitivity, metadata, verification }, null, 2), 'application/json'); break;
-    case 'print': if (!state.busy) { state.view = 'plan'; state.mapMode = 'map'; render(); requestAnimationFrame(() => window.print()); } break;
+    case 'print': if (!state.busy) {
+      if (state.view === 'simulation') { pauseRoofSimulation(); refreshSimulationFrame(); }
+      else { state.view = 'plan'; state.mapMode = 'map'; render(); }
+      requestAnimationFrame(() => window.print());
+    } break;
   }
 });
 
@@ -169,6 +228,14 @@ app.addEventListener('input', event => {
 
 app.addEventListener('change', async event => {
   const el = event.target;
+  if (el.dataset.simParam && roofSimulation) {
+    if (!el.checkValidity()) { el.reportValidity(); return; }
+    let value = Number(el.value);
+    if (el.dataset.simParam === 'selfConsumptionFraction') value /= 100;
+    try { synchronizeSimulationClock(); configureSimulation(roofSimulation, { [el.dataset.simParam]: value }); }
+    catch { el.setCustomValidity(t('invalidInput')); el.reportValidity(); return; }
+    render(); return;
+  }
   if (el.id === 'oze-layer') { state.showOze = el.checked; render(); return; }
   if (el.id === 'measurement-file') {
     if (monitoring.connected || !el.files?.[0]) return;
@@ -203,11 +270,12 @@ try {
   if (responses.some(r => !r.ok)) throw new Error('Dataset unavailable');
   [roofs, metadata] = await Promise.all(responses.map(r => r.json()));
   [geometry, verification, benchmark] = await Promise.all([optionalJson('./data/msip-roofs.geojson'), optionalJson('./data/msip-verification.json'), optionalJson('./data/benchmark.json')]);
-  roofMap = createRoofMap({ geometry, roofs, onSelect: selectRoof, onInstallationSelect: () => { state.view = 'monitor'; render(); } });
+  roofMap = createRoofMap({ geometry, roofs, onSelect: selectRoof, onInstallationSelect: () => { state.view = 'monitor'; render(); }, onSimulationSelect: () => { state.view = 'simulation'; render(); } });
   views = createViews({ state, roofs, metadata, verification, geometry, benchmark,
     getCalculation: () => ({ evaluated, candidates, reasons, roofById }),
     getMapLocation: id => roofMap.location(id),
     getMonitoring,
+    getSimulation: () => roofSimulation,
   });
   recalculate();
 } catch {

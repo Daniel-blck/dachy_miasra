@@ -1,7 +1,7 @@
 import { translate } from './i18n.js';
 import { ozeTileUrl } from './core/monitoring.js';
 
-export function createRoofMap({ geometry, roofs, onSelect, onInstallationSelect = () => {} }) {
+export function createRoofMap({ geometry, roofs, onSelect, onInstallationSelect = () => {}, onSimulationSelect = () => {} }) {
   const L = globalThis.L;
   const element = document.createElement('div');
   element.className = 'city-map';
@@ -9,6 +9,7 @@ export function createRoofMap({ geometry, roofs, onSelect, onInstallationSelect 
   element.tabIndex = 0;
   let language = 'ru', map, base, group, activeId, status = 'loading';
   let oze, ozeStatus = 'loading', showOze = false, ozeHadError = false, installationMarker, installationKey;
+  let simulationMarker, simulationKey;
   const layers = new Map(), markers = new Map(), selected = new Set(), eligible = new Set();
   const t = (key, parameters) => translate(language, key, parameters);
   const short = id => id.split('.').slice(-2).join('.').replace('_BUD', '');
@@ -117,7 +118,7 @@ export function createRoofMap({ geometry, roofs, onSelect, onInstallationSelect 
       setStatus(status);
       setOzeStatus(ozeStatus);
     },
-    update({ selectedIds, eligibleIds, roofId, ozeVisible = false, installation = null }) {
+    update({ selectedIds, eligibleIds, roofId, ozeVisible = false, installation = null, simulation = null }) {
       selected.clear(); eligible.clear();
       selectedIds.forEach(id => selected.add(id)); eligibleIds.forEach(id => eligible.add(id));
       activeId = roofId;
@@ -130,6 +131,19 @@ export function createRoofMap({ geometry, roofs, onSelect, onInstallationSelect 
       markers.get(activeId)?.bringToFront();
       showOze = ozeVisible;
       if (map) {
+        const virtualSite = simulation?.mode === 'simulation' && simulation.roof.location ? simulation.roof : null;
+        const virtualKey = virtualSite ? JSON.stringify([virtualSite.id, virtualSite.location, language]) : null;
+        if (virtualKey !== simulationKey) {
+          if (simulationMarker) map.removeLayer(simulationMarker);
+          simulationMarker = null; simulationKey = virtualKey;
+          if (virtualSite) {
+            const text = document.createElement('span'); text.textContent = `${t('simMapLabel')} · ${short(virtualSite.id)}`;
+            simulationMarker = L.circleMarker([virtualSite.location.lat, virtualSite.location.lon], { pane: 'installationPane', radius: 12, color: '#7043a0', fillColor: '#b88be0', fillOpacity: 0.5, dashArray: '4 3', weight: 3 }).addTo(map);
+            simulationMarker.getElement()?.setAttribute('data-simulation-roof-id', virtualSite.id);
+            simulationMarker.bindTooltip(text, { permanent: true, direction: 'top', className: 'simulation-map-tooltip' });
+            simulationMarker.on('click', event => { L.DomEvent.stopPropagation(event); onSimulationSelect(); });
+          }
+        }
         if (showOze && !oze) {
           oze = L.tileLayer('', { pane: 'ozePane', tileSize: 256, maxZoom: 19, attribution: '<a href="https://msip.krakow.pl/dataset/2842" target="_blank" rel="noopener">MSIP · OZE 2024</a>' });
           oze.getTileUrl = ozeTileUrl;
@@ -161,6 +175,7 @@ export function createRoofMap({ geometry, roofs, onSelect, onInstallationSelect 
     },
     fitAll() { if (map && group) map.fitBounds(group.getBounds(), { padding: [25, 25], maxZoom: 13, animate: false }); },
     focusInstallation() { if (map && installationMarker) map.setView(installationMarker.getLatLng(), 17, { animate: false }); },
+    focusSimulation() { if (map && simulationMarker) map.setView(simulationMarker.getLatLng(), 17, { animate: false }); },
     fitSelected(ids) {
       if (!map) return;
       const bounds = L.latLngBounds([]);
