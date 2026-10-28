@@ -92,3 +92,13 @@ export function optimizePortfolio(candidates, budgetPln, { maxStates = 5000 } = 
     improvementPercent: baseline > 0 ? 100 * (totals.annualEnergyKwh / baseline - 1) : null,
   };
 }
+
+export const CURVE_BUDGETS_PLN = Object.freeze([0.5, 1, 2, 3, 5, 7.5, 10, 15, 20, 30].map(m => m * 1_000_000));
+
+/** Re-optimizes the same candidates for each budget: what every additional million buys under the current assumptions. */
+export function budgetCurve(candidates, budgets = CURVE_BUDGETS_PLN) {
+  return [...new Set(budgets)].sort((a, b) => a - b).map(budgetPln => {
+    const { totals } = optimizePortfolio(candidates, budgetPln);
+    return { budgetPln, annualEnergyKwh: totals.annualEnergyKwh, costPln: totals.costPln, count: totals.count };
+  });
+}

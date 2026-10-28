@@ -35,7 +35,7 @@ Invoke-ProjectGit -GitArguments @('add', '--', '.gitignore', 'README.md', 'PROJE
 & git -C $projectRoot diff --cached --quiet
 $stagedStatus = $LASTEXITCODE
 if ($stagedStatus -eq 1) {
-    Invoke-ProjectGit -GitArguments @('commit', '-m', 'Add Dachy Miasto pilot application and data provenance')
+    Invoke-ProjectGit -GitArguments @('commit', '-m', 'Add Dachy Miasta pilot application and data provenance')
 } elseif ($stagedStatus -ne 0) {
     throw 'Unable to inspect staged changes.'
 }

@@ -37,7 +37,7 @@ test('review CSV localizes headings, leaves evidence blank, escapes labels and b
   const sample = createReviewSample([{ ...roofs[0], investmentLabel: '=HYPERLINK("bad");label\nnext' }], [], null);
   const ru = reviewCsv(sample), pl = reviewCsv(sample, 'pl');
   assert.ok(ru.startsWith('\uFEFF')); assert.match(ru, /Категория собственности участка/);
-  assert.match(pl, /Kategoria własności działki/);
+  assert.match(pl, /Grupa rejestrowa \/ forma własności działki/);
   assert.ok(ru.includes(`"'=HYPERLINK(""bad"");label\nnext"`));
   assert.match(ru, /ожидает проверки/); assert.match(pl, /oczekuje/);
   assert.ok(ru.includes(sample[0].id) && pl.includes(sample[0].id));
