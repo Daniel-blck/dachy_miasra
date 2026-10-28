@@ -9,6 +9,8 @@ import { portfolioCsv } from '../src/core/export.js';
 test('both languages have the same keys and interpolation placeholders', () => {
   assert.deepEqual(Object.keys(MESSAGES.ru), Object.keys(MESSAGES.pl));
   for (const key of Object.keys(MESSAGES.ru)) {
+    assert.doesNotMatch(MESSAGES.ru[key], /\?{2,}/, key);
+    assert.doesNotMatch(MESSAGES.pl[key], /\?{2,}/, key);
     const placeholders = text => (text.match(/\{\w+\}/g) || []).sort();
     assert.deepEqual(placeholders(MESSAGES.ru[key]), placeholders(MESSAGES.pl[key]), key);
   }

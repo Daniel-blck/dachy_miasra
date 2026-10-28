@@ -1,0 +1,17 @@
+{
+  "checkedOn": "2026-10-28",
+  "scope": "One live spot check, not a refresh of all 927 records.",
+  "url": "https://msip.um.krakow.pl/arcgis/rest/services/MONIT-AIR/WS_MA_Potencal_solarny_dachow/MapServer/0/query?f=json&where=ident%3D%27126104_9.0012.1%2F4.1_BUD%27&outFields=*&returnGeometry=false",
+  "attributes": {
+    "ident": "126104_9.0012.1/4.1_BUD",
+    "solarid": 55030,
+    "sredniepc": 997,
+    "sumapc": 6281786,
+    "powbudynku": 7910.04980469,
+    "powuzytecz": 6319.93994141,
+    "shape_leng": 390.38906115,
+    "objectid": 53684,
+    "st_area(shape)": 7910.0539,
+    "st_length(shape)": 390.38906114190496
+  }
+}

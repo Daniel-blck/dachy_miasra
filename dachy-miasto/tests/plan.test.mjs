@@ -40,7 +40,7 @@ test('building cap shrinks large installations proportionally instead of droppin
   assert.ok(Math.abs(capped.annualEnergyKwh - free.annualEnergyKwh * 150 / 240) < 1e-6);
   assert.ok(Math.abs(capped.specificYieldKwhPerKwp - free.specificYieldKwhPerKwp) < 1e-9);
   assert.equal(capped.costPln, 150 * 4000 + 15000);
-  assert.ok(Math.abs(capped.co2Tonnes - capped.annualEnergyKwh / 1000 * 0.597) < 1e-9);
+  assert.ok(Math.abs(capped.co2Tonnes - capped.annualEnergyKwh / 1000 * 0.553) < 1e-9);
   assert.throws(() => validateParameters({ ...DEFAULTS, maxCapacityKwp: 2 }));
 });
 
@@ -65,8 +65,11 @@ test('heritage, city-land, EGiB and specific-yield filters exclude with a reason
   assert.equal(reasons.private, 'Poza działkami miasta');
   assert.equal(reasons.unknown, 'Poza działkami miasta');
   assert.equal(reasons.gone, 'Brak w aktualnej EGiB');
-  // Without register data the filters stay inactive instead of emptying the plan.
-  assert.equal(prepareCandidates([{ id: 'bare', usableAreaM2: 500, annualIrradiationKwh: 400_000 }], DEFAULTS).candidates.length, 1);
+  // Missing register data cannot satisfy an explicitly enabled ownership/current-building filter.
+  const bare = [{ id: 'bare', usableAreaM2: 500, annualIrradiationKwh: 400_000 }];
+  assert.equal(prepareCandidates(bare, DEFAULTS).candidates.length, 0);
+  assert.equal(prepareCandidates(bare, { ...DEFAULTS, onlyCityLand: false }).candidates.length, 0);
+  assert.equal(prepareCandidates(bare, { ...DEFAULTS, onlyCityLand: false, requireCurrentBuilding: false }).candidates.length, 1);
 });
 
 test('ownership descriptions map to groups and heritage signals rank by required consent', () => {
@@ -111,7 +114,7 @@ test('register file covers every roof with consistent groups and statistics', ()
   assert.deepEqual({ city, inEgib, register }, { city: registers.stats.cityOwned, inEgib: registers.stats.inEgib, register: registers.stats.monumentRegister });
 });
 
-test('PVGIS reference supports the model calibration', () => {
+test('PVGIS reference provides a sanity comparison, not a validation of pilot roofs', () => {
   const horizontal = pvgis.cases.find(c => c.key === 'horizontal'), tilted = pvgis.cases.find(c => c.key === 'flat10');
   assert.ok(horizontal.irradiationKwhPerM2 > 1000 && horizontal.irradiationKwhPerM2 < 1300);
   // The model's specific yield on an unshaded horizontal roof stays within 5% of PVGIS.
@@ -133,14 +136,14 @@ test('default plan on real data is spread out, stays within budget and reports i
   assert.equal(facts.cityLandCount, facts.count, 'Default plan uses city land only.');
   assert.ok(result.selectedIds.every(id => byId.get(id).inEgib));
   assert.equal(Object.values(facts.procedures).reduce((a, b) => a + b, 0), facts.count);
-  assert.ok(Math.abs(facts.co2Tonnes - facts.annualEnergyKwh / 1000 * 0.597) < 1e-6);
+  assert.ok(Math.abs(facts.co2Tonnes - facts.annualEnergyKwh / 1000 * 0.553) < 1e-6);
   assert.ok(Math.abs(facts.costPerMwhPln - facts.costPln / (facts.annualEnergyKwh / 1000)) < 1e-6);
   const csv = portfolioCsv(candidates, result, { ...DEFAULTS, excludedIds: [] }, { referenceFile: 's', referenceSha256: 'h', snapshotDate: null });
-  for (const label of ['Limit mocy na budynek kWp (0 = bez limitu)";"150"', 'Wskaźnik emisyjności CO2 kg CO2/MWh";"597"', 'Adres (do weryfikacji)', 'Procedura', 'Uniknięta emisja t CO2/rok', 'Tylko działki miasta";"tak"', 'Funkcja budynku (EGiB)', 'Gmina Kraków - właściciel']) assert.ok(csv.includes(label), label);
+  for (const label of ['Limit mocy na budynek kWp (0 = bez limitu)";"150"', 'Wskaźnik emisyjności CO2 kg CO2/MWh";"553"', 'Adres (do weryfikacji)', 'Procedura', 'Uniknięta emisja t CO2/rok', 'Tylko działki miasta";"tak"', 'Funkcja budynku (EGiB)', 'Gmina Kraków - właściciel']) assert.ok(csv.includes(label), label);
 });
 
 test('budget curve is sorted, within each budget and never loses energy when the budget grows', () => {
-  const { candidates } = prepareCandidates(roofs, DEFAULTS);
+  const { candidates } = prepareCandidates(roofs.map(r => ({ ...r, ...registers.roofs[r.id] })), DEFAULTS);
   const curve = budgetCurve(candidates, [5e6, 1e6, 2e6, 1e6, 10e6]);
   assert.deepEqual(curve.map(p => p.budgetPln), [1e6, 2e6, 5e6, 10e6]);
   for (const [i, point] of curve.entries()) {

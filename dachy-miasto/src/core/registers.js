@@ -26,8 +26,9 @@ export function isCityLand(roof) {
 }
 
 /**
- * Heritage signals, strongest first. 'permit' needs a conservator's permit for works on the building or in the area;
- * 'opinion' means the municipal inventory or a protected zone where the conservator should be consulted.
+ * Heritage screening signals, strongest first. 'permit' is the legacy key for the stronger screening group,
+ * not a determination that this particular project needs a specific permit. UNESCO and park membership
+ * alone cannot establish the applicable legal procedure. 'opinion' is the secondary screening group.
  */
 export function heritageFlags(roof) {
   const flags = [];

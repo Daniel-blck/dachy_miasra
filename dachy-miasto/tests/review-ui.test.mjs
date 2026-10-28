@@ -12,7 +12,8 @@ const roofs = JSON.parse(roofsText), geometry = JSON.parse(geometryText);
 const metadata = JSON.parse(await read('reference-metadata.json'));
 const context = JSON.parse(await read('roof-context.json')), registers = JSON.parse(await read('roof-registers.json'));
 const merged = roofs.map(r => ({ ...r, ...(context.roofs[r.id] || {}), ...(registers.roofs[r.id] || {}) }));
-const { evaluated, candidates, reasons } = prepareCandidates(roofs, DEFAULTS);
+const pilotParameters = { ...DEFAULTS, onlyCityLand: false, requireCurrentBuilding: false };
+const { evaluated, candidates, reasons } = prepareCandidates(roofs, pilotParameters);
 const result = optimizePortfolio(candidates, DEFAULTS.budgetPln);
 // The app plan uses the joined open data, so the default register filters (city land, current EGiB) apply.
 const appCalc = prepareCandidates(merged, DEFAULTS);
@@ -70,7 +71,7 @@ test('open data adds addresses, ownership and heritage to cards, table and metho
   assert.match(html, /Punkt adresowy w obrysie|Najbliższy punkt adresowy/);
   assert.match(html, /Gmina Kraków|Powiat Kraków/);
   assert.match(html, /Jest w aktualnej ewidencji/);
-  assert.match(html, /powierzchni bez cienia/);
+  assert.match(html, /poziomego przykładu PVGIS/);
   assert.doesNotMatch(html, /\{\w+\}/);
   assert.doesNotMatch(html, /[А-Яа-яЁё]/);
   for (const filter of ['all', 'plan', 'candidate', 'outside', 'city', 'heritage', 'noAddress', 'missingEgib']) {

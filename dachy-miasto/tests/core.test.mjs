@@ -5,7 +5,7 @@ import { optimizePortfolio } from '../src/core/optimizer.js';
 import { portfolioCsv } from '../src/core/export.js';
 
 const item = (id, costCents, annualEnergyKwh) => ({ id, costCents, annualEnergyKwh, capacityKwp: 1 });
-const roof = { id: 'A', usableAreaM2: 100, annualIrradiationKwh: 100000, greenRoofPotential: false, investmentLabel: null };
+const roof = { id: 'A', usableAreaM2: 100, annualIrradiationKwh: 100000, greenRoofPotential: false, investmentLabel: null, ownership: { group: 'municipal' }, inEgib: true };
 
 test('area, radiation allocation and losses share the same coverage; cost is in cents', () => {
   const r = evaluateRoof(roof, DEFAULTS);

@@ -15,7 +15,7 @@ export const OWNERSHIP_SOURCE = Object.freeze({
 const reasons = {
   selected: ['Выбран в текущем плане', 'Wybrany w bieżącym planie'],
   investment: ['Есть отметка об инвестиции', 'Wpis o inwestycji'],
-  heritage: ['Нужно разрешение консерватора', 'Wymaga pozwolenia konserwatora'],
+  heritage: ['Охранные сигналы требуют проверки', 'Sygnały ochrony wymagają sprawdzenia'],
   green: ['Есть потенциал озеленения', 'Potencjał zielonego dachu'],
   smallest: ['Минимальная полезная площадь', 'Najmniejsza powierzchnia użyteczna'],
   largest: ['Максимальная полезная площадь', 'Największa powierzchnia użyteczna'],

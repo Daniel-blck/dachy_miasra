@@ -1,4 +1,21 @@
 @charset "UTF-8";
+
+/* Number explanations are keyboard-accessible links to one shared, current-state guide. */
+.number-help{display:inline-flex;align-items:center;justify-content:center;min-width:1.4rem;min-height:1.4rem;padding:0 .3rem;margin-left:.25rem;border:1px solid var(--blue);border-radius:50%;background:var(--surface);color:var(--blue);font-size:.8125rem;font-weight:900;line-height:1;vertical-align:middle;flex-shrink:0}
+.number-help:hover,.number-help:focus-visible{background:var(--blue);color:var(--on-blue)}
+.procedure>.number-help{justify-self:start;width:1.4rem}
+.reading-intro{display:flex;align-items:center;justify-content:space-between;gap:1.25rem;padding:1rem 1.25rem;margin-bottom:1.25rem;border-left:4px solid var(--blue);background:var(--blue-tint);font-size:.9375rem;line-height:1.6}
+.reading-intro p{margin:.4rem 0;max-width:65rem}.reading-intro .button{flex-shrink:0;white-space:normal}
+.number-kinds{display:flex;gap:.5rem;flex-wrap:wrap}.number-kinds span{padding:.1rem .5rem;border:1px solid var(--blue-soft);background:var(--surface);font-size:.8125rem}
+.field-label{display:flex;align-items:center;gap:.25rem;margin-bottom:.35rem}.field-label label{margin:0}
+.guide-back{margin-bottom:1rem}.guide-contents{display:flex;flex-wrap:wrap;gap:.5rem 1rem;margin:1.5rem 0;padding:1rem;background:var(--surface-alt)}
+.number-group{margin-top:2rem;scroll-margin-top:1rem}.number-group>h2{font-size:1.5rem}.number-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
+.number-card{padding:1.25rem;scroll-margin-top:1.5rem}.number-card h3{margin:0 0 .75rem;font-size:1.125rem;color:var(--navy)}.number-card h4{margin:1rem 0 .5rem}.number-card p{font-size:.9375rem;line-height:1.7}.number-card code{display:block;padding:.75rem;background:var(--surface-alt);font:.8125rem/1.7 Consolas,monospace;overflow-wrap:anywhere;white-space:normal}.number-card:focus{outline:3px solid var(--focus);outline-offset:3px}.number-current{padding:.5rem .75rem;background:var(--blue-tint)}.number-source{overflow-wrap:anywhere}
+.number-trace{margin:1.25rem 0}.number-trace th,.number-trace td{padding:.65rem;font-size:.875rem;text-align:left;vertical-align:top}.number-trace th{white-space:normal}.number-trace td:last-child{min-width:12rem}.number-trace code{overflow-wrap:anywhere;white-space:normal}.number-trace h2{font-size:1.25rem}
+.roof-trace-details{margin:1rem 0}.roof-trace-details>summary{color:var(--blue);cursor:pointer;font-weight:700}.roof-trace-details .number-trace{border:0;padding:0}.screen-explanation{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+@media(max-width:800px){.number-grid{grid-template-columns:1fr}.reading-intro{align-items:flex-start;flex-direction:column}.reading-intro .button{max-width:100%}}
+@media(max-width:600px){.main-nav .nav-inner{flex-wrap:wrap}.main-nav .nav-inner>button{flex:1 1 30%;min-width:0}.number-card{padding:1rem}.number-trace .table-wrap{max-width:100%}}
+@media print{.number-help,.reading-intro,.guide-back,.guide-contents,.screen-explanation,.roof-trace-details{display:none!important}}
 /* Dachy Miasta — visual language of the Kraków city portals: Lato, city blue #0063af, navy #071f32,
    city red #af1828 as accent, light grey surfaces, square corners, blue navigation bar.
    Sizes are in rem so the A/A/A text-size switch scales the whole interface. */

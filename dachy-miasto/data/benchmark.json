@@ -10,7 +10,7 @@
     "minCapacityKwp": 3,
     "maxCapacityKwp": 150,
     "minSpecificYield": 0,
-    "co2KgPerMwh": 597,
+    "co2KgPerMwh": 553,
     "onlyGreen": false,
     "omitInvestmentLabels": false,
     "onlyCityLand": true,
@@ -28,7 +28,7 @@
       "boundGapPercent": 0,
       "strategy": "largest",
       "costStepPln": 0.01,
-      "elapsedMs": 3
+      "elapsedMs": 1
     },
     {
       "budgetPln": 100000,
@@ -40,7 +40,7 @@
       "boundGapPercent": 3.818681481563536,
       "strategy": "largest",
       "costStepPln": 20,
-      "elapsedMs": 63
+      "elapsedMs": 11
     },
     {
       "budgetPln": 500000,
@@ -52,7 +52,7 @@
       "boundGapPercent": 3.879116661234298,
       "strategy": "ratio",
       "costStepPln": 100,
-      "elapsedMs": 45
+      "elapsedMs": 8
     },
     {
       "budgetPln": 1000000,
@@ -64,7 +64,7 @@
       "boundGapPercent": 3.118325108463636,
       "strategy": "dp",
       "costStepPln": 200,
-      "elapsedMs": 10
+      "elapsedMs": 7
     },
     {
       "budgetPln": 2000000,
@@ -76,7 +76,7 @@
       "boundGapPercent": 0.9423292174752713,
       "strategy": "ratio",
       "costStepPln": 400,
-      "elapsedMs": 18
+      "elapsedMs": 7
     },
     {
       "budgetPln": 5000000,
@@ -88,7 +88,7 @@
       "boundGapPercent": 0.35267886497608864,
       "strategy": "dp",
       "costStepPln": 1000,
-      "elapsedMs": 15
+      "elapsedMs": 4
     },
     {
       "budgetPln": 10000000,
@@ -100,7 +100,7 @@
       "boundGapPercent": 0.19307088882154033,
       "strategy": "dp",
       "costStepPln": 2000,
-      "elapsedMs": 22
+      "elapsedMs": 4
     },
     {
       "budgetPln": 20000000,
@@ -112,7 +112,7 @@
       "boundGapPercent": 0.08386995919277457,
       "strategy": "ratio",
       "costStepPln": 4000,
-      "elapsedMs": 18
+      "elapsedMs": 4
     }
   ],
   "scope": "Same unverified pilot candidates and explicit scenario assumptions; algorithmic comparison, not verified municipal savings."

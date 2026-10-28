@@ -36,8 +36,10 @@ test('reference irradiation matches the official records; ownership is not infer
   }
 });
 
-test('real pilot selections respect budgets and the relaxation bound across eight scenarios', () => {
-  const { candidates } = prepareCandidates(roofs, DEFAULTS);
+test('real pilot selections respect budgets and the relaxation bound across eight scenarios', async () => {
+  const registers = JSON.parse(await fs.readFile(new URL('roof-registers.json', dataDir), 'utf8'));
+  const { candidates } = prepareCandidates(roofs.map(r => ({ ...r, ...registers.roofs[r.id] })), DEFAULTS);
+  assert.ok(candidates.length > 0);
   for (const budget of [0, 100000, 500000, 1000000, 2000000, 5000000, 10000000, 20000000]) {
     const result = optimizePortfolio(candidates, budget);
     assert.ok(result.totals.costPln <= budget);

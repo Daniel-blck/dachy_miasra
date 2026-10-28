@@ -11,7 +11,7 @@
     "minCapacityKwp": 3,
     "maxCapacityKwp": 150,
     "minSpecificYield": 0,
-    "co2KgPerMwh": 597,
+    "co2KgPerMwh": 553,
     "onlyGreen": false,
     "omitInvestmentLabels": false,
     "onlyCityLand": true,

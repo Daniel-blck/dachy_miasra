@@ -7,6 +7,7 @@ import { createRoofMap } from './map.js';
 import { parseMeasurements, summarizeMeasurements, createExampleMeasurements, connectionStatus } from './core/monitoring.js';
 import { createBenchSerial } from './serial.js';
 import { createRoofSimulation, advanceSimulation, configureSimulation, resetSimulation, DAY_SECONDS, simulationArchive, simulationCsv } from './core/simulation.js';
+import { CALCULATION_METHOD, roofCalculationTrace } from './core/provenance.js';
 
 const app = document.getElementById('app');
 const SCENARIOS_KEY = 'dachy-miasto-scenarios', MAX_SCENARIOS = 4;
@@ -29,7 +30,7 @@ try {
 } catch { /* Browser storage is optional. */ }
 
 const t = (key, parameters) => translate(state.language, key, parameters);
-let roofs = [], metadata, verification, geometry, benchmark, context, registers, pvgis, views, roofMap;
+let roofs = [], metadata, verification, geometry, benchmark, context, registers, pvgis, audit, views, roofMap;
 let evaluated = [], candidates = [], reasons = {}, roofById = new Map(), job = 0;
 const worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
 const optionalJson = async url => { try { const response = await fetch(url); return response.ok ? await response.json() : null; } catch { return null; } };
@@ -185,6 +186,15 @@ function download(filename, content, type) {
 
 app.addEventListener('click', event => {
   if (event.target.closest('#city-map')) return; // Leaflet owns its pointer, keyboard and wheel events.
+  const explanation = event.target.closest('[data-explain]');
+  if (explanation) {
+    event.preventDefault();
+    if (state.view !== 'guide') state.explanationBack = state.view;
+    state.view = 'guide'; state.explanation = explanation.dataset.explain; render();
+    const target = document.getElementById('explain-' + state.explanation);
+    target?.focus({ preventScroll: true }); target?.scrollIntoView({ block: 'start' });
+    return;
+  }
   const language = event.target.closest('[data-language]');
   if (language) { state.language = language.dataset.language; persist(); render(); return; }
   const view = event.target.closest('[data-view]');
@@ -194,6 +204,7 @@ app.addEventListener('click', event => {
   const button = event.target.closest('[data-action]');
   if (!button || button.disabled) return;
   switch (button.dataset.action) {
+    case 'explain-back': state.view = state.explanationBack || 'plan'; render(); window.scrollTo(0, 0); break;
     case 'simulate-roof': beginRoofSimulation(button.dataset.id); break;
     case 'simulation-create': beginRoofSimulation(); break;
     case 'simulation-start': if (roofSimulation && roofSimulation.timeSeconds < DAY_SECONDS) { simulationTickAt = performance.now(); roofSimulation.running = true; refreshSimulationFrame(); } break;
@@ -242,7 +253,7 @@ app.addEventListener('click', event => {
         if (roofSimulation) { synchronizeSimulationClock(); download(`dachy-simulation-${state.language}.csv`, simulationCsv(roofSimulation, state.language), 'text/csv;charset=utf-8'); refreshSimulationFrame(); }
       } else if (!state.busy && state.result) download('dachy-miasta-portfel.csv', portfolioCsv(evaluated, state.result, { ...state.parameters, excludedIds: state.excludedIds }, metadata, state.language), 'text/csv;charset=utf-8');
       break;
-    case 'export-json': if (!state.busy && state.result) download('dachy-miasta-scenariusz.json', JSON.stringify({ version: 2, language: state.language, parameters: state.parameters, excludedIds: state.excludedIds, result: state.result, plan: planFacts(), sensitivity: state.sensitivity, budgetCurve: state.curve, savedScenarios: state.saved, metadata, verification, context: context ? { retrievedAt: context.retrievedAt, sources: context.sources, method: context.method, stats: context.stats } : null, registers: registers ? { retrievedAt: registers.retrievedAt, sources: registers.sources, currency: registers.currency, method: registers.method, stats: registers.stats } : null, pvgis }, null, 2), 'application/json'); break;
+    case 'export-json': if (!state.busy && state.result) download('dachy-miasta-scenariusz.json', JSON.stringify({ version: 3, calculationMethod: CALCULATION_METHOD, sourceAudit: audit ? { inputSha256: audit.inputSha256, sourceRetrievedAt: audit.sourceRetrievedAt, sourceSurveyDate: audit.sourceSurveyDate, solar: { records: audit.solar.records, roundedAreaMatches: audit.solar.roundedAreaMatches, maxAreaRoundingDeltaM2: audit.solar.maxAreaRoundingDeltaM2 } } : null, selectedRoofCalculations: state.result.selectedIds.map(id => roofCalculationTrace(roofById.get(id), state.parameters, geometry?.features.find(f => f.properties.ident === id))), language: state.language, parameters: state.parameters, excludedIds: state.excludedIds, result: state.result, plan: planFacts(), sensitivity: state.sensitivity, budgetCurve: state.curve, savedScenarios: state.saved, metadata, verification, context: context ? { retrievedAt: context.retrievedAt, sources: context.sources, method: context.method, stats: context.stats } : null, registers: registers ? { retrievedAt: registers.retrievedAt, sources: registers.sources, currency: registers.currency, method: registers.method, stats: registers.stats } : null, pvgis }, null, 2), 'application/json'); break;
     case 'print': if (!state.busy) {
       if (state.view === 'simulation') { pauseRoofSimulation(); refreshSimulationFrame(); }
       else { state.view = 'plan'; state.mapMode = 'map'; render(); roofMap.fitSelected(state.result?.selectedIds || []); }
@@ -308,13 +319,15 @@ try {
   const responses = await Promise.all([fetch('./data/roofs.json'), fetch('./data/reference-metadata.json')]);
   if (responses.some(r => !r.ok)) throw new Error('Dataset unavailable');
   [roofs, metadata] = await Promise.all(responses.map(r => r.json()));
-  [geometry, verification, benchmark, context, registers, pvgis] = await Promise.all([optionalJson('./data/msip-roofs.geojson'), optionalJson('./data/msip-verification.json'), optionalJson('./data/benchmark.json'), optionalJson('./data/roof-context.json'), optionalJson('./data/roof-registers.json'), optionalJson('./data/pvgis-reference.json')]);
+  [geometry, verification, benchmark, context, registers, pvgis, audit] = await Promise.all([optionalJson('./data/msip-roofs.geojson'), optionalJson('./data/msip-verification.json'), optionalJson('./data/benchmark.json'), optionalJson('./data/roof-context.json'), optionalJson('./data/roof-registers.json'), optionalJson('./data/pvgis-reference.json'), optionalJson('./data/source-audit.json')]);
+  const solarById = new Map((geometry?.features || []).map(f => [f.properties.ident, f.properties]));
+  roofs = roofs.map(r => ({ ...r, solarSource: solarById.get(r.id) || null }));
   // Address, district and cultural park are joined from municipal open data by scripts/fetch-context.mjs.
   if (context?.roofs) roofs = roofs.map(r => ({ ...r, ...(context.roofs[r.id] || {}) }));
   // Building class, parcel ownership, heritage and RES records come from scripts/fetch-registers.mjs.
   if (registers?.roofs) roofs = roofs.map(r => ({ ...r, ...(registers.roofs[r.id] || {}) }));
   roofMap = createRoofMap({ geometry, roofs, onSelect: selectRoof, onInstallationSelect: () => { state.view = 'monitor'; render(); }, onSimulationSelect: () => { state.view = 'simulation'; render(); } });
-  views = createViews({ state, roofs, metadata, verification, geometry, benchmark, context, registers, pvgis,
+  views = createViews({ state, roofs, metadata, verification, geometry, benchmark, context, registers, pvgis, audit,
     getCalculation: () => ({ evaluated, candidates, reasons, roofById }),
     getMapLocation: id => roofMap.location(id),
     getMonitoring,

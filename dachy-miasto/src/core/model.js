@@ -11,11 +11,11 @@ export const DEFAULTS = Object.freeze({
   // 150 kW: PV up to this size needs neither a building permit nor a construction notification (Prawo budowlane, art. 29 ust. 4 pkt 3 lit. c). 0 = no limit.
   maxCapacityKwp: 150,
   minSpecificYield: 0,
-  // KOBiZE emission factor for electricity at end users, published 12.2024 (2023 data), kg CO2/MWh.
-  co2KgPerMwh: 597,
+  // KOBiZE table 2, published 12.2025 (2024 data), kg CO2/MWh at end users.
+  co2KgPerMwh: 553,
   onlyGreen: false,
   omitInvestmentLabels: false,
-  // Register filters apply only when data/roof-registers.json is loaded (see src/core/registers.js).
+  // When enabled, register filters require a positive match; missing data never grants eligibility.
   onlyCityLand: true,
   requireCurrentBuilding: true,
   omitHeritage: false,
@@ -59,6 +59,9 @@ export function evaluateRoof(roof, parameters) {
   const costCents = Math.round((capacityKwp * p.costPerKwpPln + p.fixedCostPln) * 100);
   return {
     ...roof, potentialKwp, panelAreaM2, capacityKwp, annualEnergyKwh, costCents,
+    requestedPanelAreaM2: roof.usableAreaM2 * p.coverage,
+    capacityScale: scale,
+    effectiveCoverage: p.coverage * scale,
     capped: capacityKwp < potentialKwp,
     costPln: costCents / 100,
     kwhPerThousandPln: annualEnergyKwh / (costCents / 100_000),
@@ -79,8 +82,8 @@ export function prepareCandidates(roofs, parameters, excludedIds = []) {
     if (excluded.has(roof.id)) reason = 'Wykluczenie użytkownika';
     else if (parameters.onlyGreen && !roof.greenRoofPotential) reason = 'Brak flagi zielonego dachu';
     else if (parameters.omitInvestmentLabels && roof.investmentLabel) reason = 'Filtr odnotowanych inwestycji';
-    else if (parameters.onlyCityLand && isCityLand(roof) === false) reason = 'Poza działkami miasta';
-    else if (parameters.requireCurrentBuilding && roof.inEgib === false) reason = 'Brak w aktualnej EGiB';
+    else if (parameters.onlyCityLand && isCityLand(roof) !== true) reason = 'Poza działkami miasta';
+    else if (parameters.requireCurrentBuilding && roof.inEgib !== true) reason = 'Brak w aktualnej EGiB';
     else if (parameters.omitHeritage && needsConservator(roof)) reason = 'Ochrona konserwatorska';
     else if (roof.capacityKwp < parameters.minCapacityKwp) reason = 'Moc poniżej progu scenariusza';
     else if (parameters.minSpecificYield > 0 && roof.specificYieldKwhPerKwp < parameters.minSpecificYield) reason = 'Niski uzysk jednostkowy';
