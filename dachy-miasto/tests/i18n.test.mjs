@@ -19,7 +19,7 @@ test('both languages have the same keys and interpolation placeholders', () => {
 });
 
 test('all literal UI translation keys exist', async () => {
-  for (const name of ['views.js', 'controller.js', 'map.js', 'monitoring-view.js', 'simulation-view.js']) {
+  for (const name of ['views.js', 'controller.js', 'map.js', 'simulation-view.js', 'roof-scene.js']) {
     const source = await fs.readFile(new URL('../src/' + name, import.meta.url), 'utf8');
     for (const match of source.matchAll(/\bt\('([\w]+)'(?=\s*[,\)])/g)) assert.ok(MESSAGES.ru[match[1]], `${name}: ${match[1]}`);
   }

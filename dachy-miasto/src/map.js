@@ -1,14 +1,14 @@
 import { translate, roofLabel } from './i18n.js';
-import { ozeTileUrl } from './core/monitoring.js';
+import { ozeTileUrl } from './core/oze.js';
 
-export function createRoofMap({ geometry, roofs, onSelect, onInstallationSelect = () => {}, onSimulationSelect = () => {} }) {
+export function createRoofMap({ geometry, roofs, onSelect, onSimulationSelect = () => {} }) {
   const L = globalThis.L;
   const element = document.createElement('div');
   element.className = 'city-map';
   element.id = 'city-map';
   element.tabIndex = 0;
   let language = 'pl', map, base, group, labels, activeId, showOutside = false, status = 'loading';
-  let oze, ozeStatus = 'loading', showOze = false, ozeHadError = false, installationMarker, installationKey;
+  let oze, ozeStatus = 'loading', showOze = false, ozeHadError = false;
   let simulationMarker, simulationKey;
   const layers = new Map(), markers = new Map(), selected = new Set(), eligible = new Set();
   const t = (key, parameters) => translate(language, key, parameters);
@@ -69,7 +69,7 @@ export function createRoofMap({ geometry, roofs, onSelect, onInstallationSelect 
     map = L.map(element, { scrollWheelZoom: true, zoomControl: false, maxZoom: 19, minZoom: 9, zoomAnimation: false, fadeAnimation: false });
     map.createPane('ozePane'); map.getPane('ozePane').style.zIndex = 440;
     map.getPane('ozePane').style.pointerEvents = 'none';
-    map.createPane('installationPane'); map.getPane('installationPane').style.zIndex = 460;
+    map.createPane('simulationPane'); map.getPane('simulationPane').style.zIndex = 620;
     L.control.zoom({ position: 'topright' }).addTo(map);
     map.attributionControl.setPrefix('<a href="https://leafletjs.com/" target="_blank" rel="noopener">Leaflet</a>');
     base = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -125,7 +125,7 @@ export function createRoofMap({ geometry, roofs, onSelect, onInstallationSelect 
       setStatus(status);
       setOzeStatus(ozeStatus);
     },
-    update({ selectedIds, eligibleIds, roofId, showOutside: outside = false, ozeVisible = false, installation = null, simulation = null }) {
+    update({ selectedIds, eligibleIds, roofId, showOutside: outside = false, ozeVisible = false, simulation = null }) {
       selected.clear(); eligible.clear();
       selectedIds.forEach(id => selected.add(id)); eligibleIds.forEach(id => eligible.add(id));
       activeId = roofId; showOutside = outside; showOze = ozeVisible;
@@ -147,7 +147,7 @@ export function createRoofMap({ geometry, roofs, onSelect, onInstallationSelect 
         simulationMarker = null; simulationKey = virtualKey;
         if (virtualSite) {
           const text = document.createElement('span'); text.textContent = `${t('simMapLabel')} · ${roofLabel(language, virtualSite.id)}`;
-          simulationMarker = L.circleMarker([virtualSite.location.lat, virtualSite.location.lon], { pane: 'installationPane', radius: 12, color: '#7043a0', fillColor: '#b88be0', fillOpacity: 0.5, dashArray: '4 3', weight: 3 }).addTo(map);
+          simulationMarker = L.circleMarker([virtualSite.location.lat, virtualSite.location.lon], { pane: 'simulationPane', radius: 12, color: '#7043a0', fillColor: '#b88be0', fillOpacity: 0.5, dashArray: '4 3', weight: 3 }).addTo(map);
           simulationMarker.getElement()?.setAttribute('data-simulation-roof-id', virtualSite.id);
           simulationMarker.bindTooltip(text, { permanent: true, direction: 'top', className: 'simulation-map-tooltip' });
           simulationMarker.on('click', event => { L.DomEvent.stopPropagation(event); onSimulationSelect(); });
@@ -172,26 +172,12 @@ export function createRoofMap({ geometry, roofs, onSelect, onInstallationSelect 
       }
       if (showOze && !map.hasLayer(oze)) oze.addTo(map);
       else if (!showOze && oze && map.hasLayer(oze)) map.removeLayer(oze);
-      const site = installation?.mode === 'recording' && installation.installation.kind === 'pv' ? installation.installation : null;
-      const key = site?.location ? JSON.stringify([site.id, site.name, site.location, language]) : null;
-      if (key !== installationKey) {
-        if (installationMarker) map.removeLayer(installationMarker);
-        installationMarker = null; installationKey = key;
-        if (key) {
-          const label = document.createElement('span'); label.textContent = `${site.name} · ${t('importedInstallation')}`;
-          installationMarker = L.circleMarker([site.location.latitude, site.location.longitude], { pane: 'installationPane', radius: 9, color: '#174d72', fillColor: '#4da9d2', fillOpacity: 0.95, weight: 3 }).addTo(map);
-          installationMarker.getElement()?.setAttribute('data-installation-id', site.id);
-          installationMarker.bindTooltip(label);
-          installationMarker.on('click', event => { L.DomEvent.stopPropagation(event); onInstallationSelect(); });
-        }
-      }
       setOzeStatus(ozeStatus);
     },
     focus(id) {
       const layer = layers.get(id);
       if (map && layer) map.fitBounds(layer.getBounds(), { padding: [65, 65], maxZoom: 18, animate: false });
     },
-    focusInstallation() { if (map && installationMarker) map.setView(installationMarker.getLatLng(), 17, { animate: false }); },
     focusSimulation() { if (map && simulationMarker) map.setView(simulationMarker.getLatLng(), 17, { animate: false }); },
     fitAll() { if (map && group) map.fitBounds(group.getBounds(), { padding: [25, 25], maxZoom: 13, animate: false }); },
     fitSelected(ids) {

@@ -1,5 +1,5 @@
-// Reference yield for Kraków from PVGIS (European Commission JRC), used to calibrate the roof model.
-// PVGIS models terrain horizon but not neighbouring buildings, so it is an unshaded upper reference.
+// Historical comparison cases for Kraków from PVGIS, not a calibration or validation of pilot roofs.
+// PVGIS models terrain horizon but not neighbouring buildings. The current simulator uses fetch-climate.mjs.
 // Usage: node scripts/fetch-pvgis.mjs   (network access to re.jrc.ec.europa.eu is required)
 import fs from 'node:fs/promises';
 

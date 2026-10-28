@@ -16,7 +16,7 @@ Wzór / reguła:
 
 ## Mapa, numery i kolory
 
-Obrys to rzut budynku z MSIP, nie układ modułów. Czerwone dachy i numery to wybrany plan, uporządkowany według prognozy rocznej. Niebieskie spełniają filtry; szare ich nie spełniają. Kliknięcie wybiera kartę, ale nie dodaje dachu do planu. Fioletowy znacznik oznacza symulację, osobny niebieski — importowaną instalację PV.
+Obrys to rzut budynku z MSIP, nie układ modułów. Czerwone dachy i numery to wybrany plan, uporządkowany według prognozy rocznej. Niebieskie spełniają filtry; szare ich nie spełniają. Kliknięcie wybiera kartę, ale nie dodaje dachu do planu. Fioletowy znacznik wskazuje dach bieżącego szkicu PV.
 
 Wzór / reguła:
 
@@ -410,122 +410,86 @@ marginal = Δ(E/1000) / Δ(B/1e6); share = 100 × Eᵢ / ΣE
 
 Źródło: [Zasady doboru](./DATA_SOURCES.md).
 
-## Czas wirtualny i prędkość
+## Moduły i szkic przestrzenny
 
-Zegar pokazuje czas umowny, nie dzisiejszy dzień i pogodę. Start 06:00; po 18:00 produkcja wynosi zero, o 24:00 dzień się kończy. 60 / 300 / 600 / 1800 sekund wirtualnych na rzeczywistą to 1 / 5 / 10 / 30 minut. Pauza, wyjście z ekranu i ukrycie karty zatrzymują naliczanie.
-
-Wzór / reguła:
-
-```text
-Δtvirtual = Δtreal × speed; progress = (t−06:00)/(24:00−06:00)
-```
-
-Źródło: [Model illustrative-day-v1](./SIMULATION.md).
-
-## Moc i kształt dnia edukacyjnego
-
-Krzywa bazowa to sinusoida od 06:00 do 18:00. Energię dnia ustalamy jako 1/365 prognozy rocznej, ograniczając szczyt mocą instalacji. To nie prognoza sezonowa ani pogodowa. Warunki mnożą moc przez zadane 1 / 0,45 / 0,15 / 0, bez odczytu czujnika.
+Obrys budynku i otwory pochodzą z MSIP. Płaski dach, wysokość 6 m, moduł 2 × 1 m, początkowe odsunięcie 0,5 m i prześwit 0,8 m to jawne założenia. Moduły w całości mieszczą się w obrysie z odsunięciem; liczbę ogranicza pole modułów z „Planu”. Moc modułu = 2 m² × sprawność × 1 kW/m². To nie pomiar, dobór urządzeń ani ocena nośności. Kamera zmienia wyłącznie rysunek.
 
 Wzór / reguła:
 
 ```text
-Ppeak = min(Pnominal, (Eyear/365) × π/24 h); P(t) = Ppeak × sin(π×(hour−6)/12) × factor
+N ≤ floor(Apanels / 2 m²); Psketch = N × 2 m² × η × 1 kW/m²
 ```
 
-Źródło: [Model illustrative-day-v1](./SIMULATION.md).
+Źródło: [MSIP · PV sketch](./SIMULATION.md).
 
-## Zgromadzona energia wirtualna
+## Nachylenie, kierunek i porównanie
 
-Całka z mocy edukacyjnej od startu do wskazanego czasu, według sekund wirtualnych. Zmiana warunków dotyczy przyszłości, nie historii. Zatrzymana instalacja ma zerową moc przy biegnącym zegarze; pauza zatrzymuje oba. Prędkość odtwarzania nie zmienia energii tego samego przedziału wirtualnego.
+Nachylenie liczymy od poziomu: 0° poziomo, 60° stromo. Azymut: 0° północ, 90° wschód, 180° południe, 270° zachód. Kierunek i nachylenie zmieniają promieniowanie, liczbę modułów i energię. Tabela porównuje tę samą moc 1 kWp bez dodatkowego cienia i śniegu. Najlepszy pokazany wariant może się różnić zimą i latem; to nie ciągła optymalizacja ani zalecenie bez oględzin.
 
 Wzór / reguła:
 
 ```text
-E [kWh] = ∫ P(t) [kW] dt [h]
+Gpoa = DNI × max(0, cos(incidence)) + DHI × (1+cos β)/2 + GHI × 0.2 × (1−cos β)/2
 ```
 
-Źródło: [Model illustrative-day-v1](./SIMULATION.md).
+Źródło: [PVGIS 5.3 · TMY · Kraków](./data/krakow-climate.json).
 
-## Autokonsumpcja i eksport
+## Pogoda Krakowa, pory roku i P10/P50/P90
 
-60% autokonsumpcji to edytowalne założenie, nie profil zużycia budynku. Każdy przyrost energii dzielimy na zużycie własne i eksport; suma równa się produkcji. Zmiana udziału nie przepisuje zgromadzonych przepływów. Nie modelujemy magazynu.
+Lokalny zapis PVGIS 5.3 obejmuje 8 760 godzin roku typowego dla centrum Krakowa. SARAH3 dostarcza promieniowanie, ERA5 temperaturę i wiatr; okres danych to 2005–2023. Miesiące pochodzą z różnych lat historycznych. Dni miesiąca szeregujemy według sumy promieniowania poziomego znormalizowanej przybliżonym profilem bezchmurnym Haurwitza. P10/P50/P90 wybierają profile na 10/50/90 percentylu rankingu. Nie określają procentu zachmurzenia, opadów ani szans pogody jutro. Śnieg na modułach i dodatkowy cień wpisuje użytkownik; nie wynikają z zimowej daty.
 
 Wzór / reguła:
 
 ```text
-ΔEself = ΔE × share; ΔEexport = ΔE × (1−share)
+weather day = percentile(month days, ΣGHI / ΣGclear); Gused = Gpoa × (1−shade/100) × (1−snow/100)
 ```
 
-Źródło: [Model illustrative-day-v1](./SIMULATION.md).
+Źródło: [PVGIS 5.3 · TMY · Kraków](./data/krakow-climate.json).
 
-## Ceny i umowny efekt finansowy
+## Obliczenie mocy i temperatury
 
-W symulatorze 1,00 i 0,30 zł/kWh to ceny edukacyjne zakupu i eksportu, nie taryfy. W monitoringu trzeba je wpisać. Efekt to wartość brutto autokonsumpcji i eksportu, nie zysk netto, zwrot ani rozliczenie net-billing. Zmiana cen przelicza całą zgromadzoną energię.
+Moc wynika z liczby modułów, nachylenia, kierunku, słońca, temperatury i wiatru. Temperaturę modułu szacuje Faiman przy U0=25 i U1=6,84; wiatr ERA5 jest na wysokości 10 m, nie przy modułach. Współczynnik −0,4%/°C i straty 14% to założenia, nie karta urządzenia. Wyjście ograniczamy mocą znamionową. Nie modelujemy osobno cieni między rzędami i falownika.
 
 Wzór / reguła:
 
 ```text
-value [zł] = Eself [kWh] × buyRate + Eexport [kWh] × sellRate
+Tmodule = Tair + Gused/(25 + 6.84 × wind); P = min(Pnom, Pnom × Gused/1000 × max(0,1−0.004×(Tmodule−25)) × 0.86)
 ```
 
-Źródło: [Model illustrative-day-v1](./SIMULATION.md).
+Źródło: [Faiman · pvlib](https://pvlib-python.readthedocs.io/en/stable/reference/generated/pvlib.temperature.faiman.html).
 
-## Zapis dachu, rok i dzień bazowy
+## Energia godziny, dnia, miesiąca i roku
 
-Przy tworzeniu kopiujemy ID, parametry, moc i prognozę roczną wybranego dachu. Późniejsze zmiany planu nie zmieniają tej symulacji. Aby zastosować nowe parametry, utwórz ją ponownie. JSON i CSV są oznaczone jako simulation i nie są przyjmowane jako pomiary.
+Energia wybranego dnia sumuje 24 wartości godzinowe. Rok sumuje 8 760 godzin TMY, miesiące odpowiednie godziny. Wartość „do chwili” obejmuje początek dnia i część bieżącej godziny. W godzinie moc jest stała. Zmiana parametrów przelicza cały scenariusz; konfiguracji nie mieszamy w historii. P10/P50/P90 zmieniają przykład dnia, nie rok. Dane godzinowe nie uzasadniają dokładności sekundowej.
 
 Wzór / reguła:
 
 ```text
-baselineDay = integral(clear-day curve); target = Eyear/365
+E [kWh] ≈ Σ(P [W] × Δt [h])/1000; year = Σ8760 hours; month = Σmonth hours
 ```
 
-Źródło: [Model illustrative-day-v1](./SIMULATION.md).
+Źródło: [PVGIS 5.3 · TMY · Kraków](./data/krakow-climate.json).
 
-## Zmierzona moc i odczyty V/A
+## Czas i odtwarzanie doby
 
-Plik zawiera powerW w watach; stanowisko USB mierzy napięcie i prąd pod obciążeniem i mnoży je. Czas USB nadaje komputer. Plik nie staje się połączeniem na żywo. Po 10 sekundach bez danych moc bieżąca jest nieznana; ostatni odczyt pozostaje historyczny. Przykład edukacyjny jest zawsze sztuczny.
+Pokazujemy czas historycznego dnia w Europe/Warsaw z właściwym czasem letnim. Przykład ma 24 różne godziny; dni zmiany czasu nie są wybierane. Rok zachowuje wszystkie 8 760 godzin źródła. Przesunięcie promieniowania PVGIS 0,1811 godziny uwzględniamy w pozycji słońca. Odtwarzanie i suwak przesuwają wskaźnik; prędkość nie zmienia energii dobowej.
 
 Wzór / reguła:
 
 ```text
-P [W] = U [V] × I [A]; live only if age ≤ 10 s
+Δtplayback = Δtreal × speed; solar time = UTC timestamp + irradiance_time_offset
 ```
 
-Źródło: [Zapis JSON / USB](./MONITORING.md).
+Źródło: [PVGIS 5.3 · TMY · Kraków](./data/krakow-climate.json).
 
-## Zmierzona energia
+## Źródła szkicu i różnica względem „Planu”
 
-Sumujemy trapezy między sąsiednimi odczytami tylko dla odstępów nieprzekraczających limitu. To Wh z pokrytych okresów, nie prognoza roczna. Zero oznacza zmierzony wynik zerowy; kreska — brak danych. Dla stanowiska to energia DC na obciążeniu, nie wyjście miejskiej instalacji AC.
+Geometria to obrys MSIP, klimat to zapisany TMY PVGIS, parametry instalacji to scenariusz. Historyczne promieniowanie MONIT-AIR służy do doboru dachów; nie mnożymy go ponownie przez nowy kąt. Symulacja ma osobny model klimatyczny, więc wyniki mogą się różnić. JSON przechowuje źródło, lata, wymiary, współrzędne modułów, parametry i miesiące. Nie wymaga licznika, miejskiej instalacji, zakupu urządzeń ani zbierania pomiarów.
 
 Wzór / reguła:
 
 ```text
-E [Wh] = Σ ((Pᵢ+Pᵢ₊₁)/2) × Δt [s]/3600
+MSIP footprint + user layout + PVGIS TMY → separate configuration scenario
 ```
 
-Źródło: [Zapis JSON / USB](./MONITORING.md).
-
-## Czas, przerwy i liczba odczytów
-
-Czas to suma zaliczonych odstępów, nie różnica pierwszej i ostatniej daty. Przerwa to para odczytów odległych o więcej niż limit (domyślnie 30 s); jej energii nie uzupełniamy. Liczba odczytów obejmuje wszystkie wiersze, także granice przerw. Daty pokazujemy w strefie przeglądarki.
-
-Wzór / reguła:
-
-```text
-Tobserved = Σ Δt where 0 < Δt ≤ maxGap; Ngaps = count(Δt > maxGap)
-```
-
-Źródło: [Zapis JSON / USB](./MONITORING.md).
-
-## Zmierzone przepływy i pieniądze
-
-Autokonsumpcję i eksport całkujemy tylko przy obu przepływach na obu końcach każdego zaliczonego odcinka. Efekt finansowy wymaga PV po stronie AC, kompletnych przepływów i obu cen. Nie podstawiamy tu 60% z symulatora. Suma przepływów może być mniejsza od generacji; brakująca część nie jest automatycznie sprzedawana.
-
-Wzór / reguła:
-
-```text
-value = Eself/1000 × buyRate + Eexport/1000 × sellRate, E in Wh
-```
-
-Źródło: [Zapis JSON / USB](./MONITORING.md).
+Źródło: [PVGIS 5.3 · TMY · Kraków](./data/krakow-climate.json).

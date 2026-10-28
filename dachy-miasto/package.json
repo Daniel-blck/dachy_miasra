@@ -1,6 +1,6 @@
 {
   "name": "dachy-miasto",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "private": true,
   "type": "module",
   "description": "Wyjaśnialne planowanie portfela dachów pod instalacje PV",
@@ -11,6 +11,7 @@
     "context": "node scripts/fetch-context.mjs",
     "registers": "node scripts/fetch-registers.mjs",
     "pvgis": "node scripts/fetch-pvgis.mjs",
+    "climate": "node scripts/fetch-climate.mjs",
     "test": "node --test tests/*.test.mjs",
     "audit:data": "node scripts/audit-data.mjs",
     "docs:numbers": "node scripts/write-number-guide.mjs",
