@@ -36,6 +36,17 @@ const optionalJson = async url => { try { const response = await fetch(url); ret
 
 let roofSimulation = null, simulationTickAt = 0;
 
+// Keep the reader's expanded sections when a calculation replaces the markup.
+const disclosureState = new Map();
+function rememberDisclosures(root) {
+  for (const section of root.querySelectorAll('details[data-disclosure]')) disclosureState.set(section.dataset.disclosure, section.open);
+}
+function restoreDisclosures(root) {
+  for (const section of root.querySelectorAll('details[data-disclosure]')) {
+    if (disclosureState.has(section.dataset.disclosure)) section.open = disclosureState.get(section.dataset.disclosure);
+  }
+}
+
 function synchronizeSimulationClock() {
   const now = performance.now();
   if (roofSimulation?.running) advanceSimulation(roofSimulation, Math.max(0, now - simulationTickAt) / 1000 * roofSimulation.speed);
@@ -50,7 +61,9 @@ function pauseRoofSimulation() {
 function refreshSimulationFrame() {
   const frame = document.getElementById('simulation-frame');
   if (!frame || !roofSimulation) return;
+  rememberDisclosures(frame);
   frame.innerHTML = views.simulationFrame();
+  restoreDisclosures(frame);
   const start = app.querySelector('[data-action="simulation-start"]'), pause = app.querySelector('[data-action="simulation-pause"]');
   if (start) start.disabled = roofSimulation.running || roofSimulation.timeSeconds >= DAY_SECONDS;
   if (pause) pause.disabled = !roofSimulation.running;
@@ -89,7 +102,9 @@ function persist() {
 function render() {
   if (!views) return;
   if (state.view !== 'simulation' && roofSimulation?.running) pauseRoofSimulation();
+  rememberDisclosures(app);
   app.innerHTML = views.html();
+  restoreDisclosures(app);
   document.documentElement.lang = state.language;
   document.documentElement.dataset.size = state.fontSize;
   document.documentElement.dataset.theme = state.theme;

@@ -1,15 +1,17 @@
 import { EXTRA_MESSAGES } from './i18n-extra.js';
 import { SIMULATION_MESSAGES } from './i18n-simulation.js';
+import { SIMPLE_MESSAGES } from './i18n-simple.js';
 
 const entries = [
   ...EXTRA_MESSAGES,
   ...SIMULATION_MESSAGES,
+  ...SIMPLE_MESSAGES,
   ['guide', 'Как читать', 'Jak czytać'],
   ['averageIrradiation', 'Среднее годовое солнечное излучение', 'Średnie roczne promieniowanie słoneczne'],
   ['guideLink', 'Что означает каждое число', 'Co oznacza każda liczba'],
   ['missingRegisterNotice', 'Реестр не загружен: включённые фильтры городской земли и EGiB не допускают объекты без подтверждения. Проверьте загрузку файлов или явно отключите фильтры.', 'Nie wczytano rejestru: aktywne filtry działek miasta i EGiB nie dopuszczają obiektów bez potwierdzenia. Sprawdź pliki lub jawnie wyłącz filtry.'],
-  ['sourceAreaLabel', 'Полезная площадь MSIP', 'Pole użyteczne MSIP'],
-  ['buildingAreaLabel', 'Площадь здания MSIP', 'Pole budynku MSIP'],
+  ['sourceAreaLabel', 'Модельная полезная площадь MSIP', 'Modelowa powierzchnia użyteczna MSIP'],
+  ['buildingAreaLabel', 'Площадь контура здания MSIP', 'Pole obrysu budynku MSIP'],
   ['effectiveCoverageLabel', 'Фактическая доля в сценарии после предела', 'Efektywny udział w scenariuszu po limicie'],
   ['requestedCoverageLabel', 'Запрошенная доля до предела', 'Żądany udział przed limitem'],
   ['explainFormulaScaled', '{sun} кВт·ч/год × {coverage}% × {efficiency}% × {pr} PR × {scale} (предел мощности) = {energy} кВт·ч/год', '{sun} kWh/rok × {coverage}% × {efficiency}% × {pr} PR × {scale} (limit mocy) = {energy} kWh/rok'],

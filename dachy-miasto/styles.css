@@ -149,6 +149,39 @@ input[type=range]{width:100%;accent-color:var(--blue);margin:.6rem 0 .3rem;curso
 .calculating .kpi-value{opacity:.5}
 .calculating .portfolio-list{opacity:.6}
 
+/* Let readers start with the decision and open the supporting detail as needed. */
+.primary-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+.simple-intro{margin:0 0 1.25rem;padding:1rem 1.25rem;background:var(--surface-alt);border-left:4px solid var(--blue)}
+.simple-intro>p{margin:0 0 .4rem;font-size:1.0625rem;line-height:1.6}
+.simple-intro>small{display:block;font-size:.875rem;line-height:1.6;color:var(--muted)}
+.source-links{display:flex;flex-wrap:wrap;gap:.5rem 1.25rem;margin-top:.75rem;font-size:.875rem;line-height:1.6}
+.source-links a,.source-record-link a{overflow-wrap:anywhere}
+.progressive>summary,.plan-summary summary{padding:1rem 1.25rem;font-size:.9375rem;font-weight:700;line-height:1.5;color:var(--blue);cursor:pointer}
+.progressive>summary:focus-visible,.plan-summary summary:focus-visible{outline:3px solid var(--blue);outline-offset:-3px}
+.progressive[open]>summary{border-bottom:1px solid var(--line)}
+.progressive-content{min-width:0;padding:1rem}
+.progressive-content>.panel{border:0}
+.progressive-content>.panel::before,.progressive-content>.panel::after{display:none}
+.progressive-content>.panel>.panel-title{padding:0 0 .75rem}
+.progressive-content .explain-content,.progressive-content .analysis-content{padding:.5rem 0}
+.progressive-content .orientation-panel{margin-top:0;padding:0}
+.plan-summary summary{padding:.25rem 0}
+.roof-source-details{margin-top:1rem;border:1px solid var(--line)}
+.roof-source-details>summary{padding:.75rem;font-size:.875rem}
+.roof-source-details>.progressive-content{padding:.75rem}
+.source-record-link{margin:.8rem 0;font-size:.875rem;line-height:1.6}
+.area-explanation{margin:1rem 0;padding:.75rem;background:var(--surface-alt);border-left:3px solid var(--blue);font-size:.8125rem;line-height:1.6}
+.area-explanation p{margin:.4rem 0}
+.analysis-extra{padding:1rem 0 0;border-top:1px solid var(--line);font-size:.875rem;line-height:1.6}
+.simple-model-note{margin:1rem 0;padding:.75rem 1rem;border:1px solid var(--line);font-size:.875rem;line-height:1.6}
+.simple-model-note p{margin:0}
+.simulation-stage #simulation-frame>.progressive{margin:.75rem 1.25rem;border:1px solid var(--line)}
+.simulation-stage #simulation-frame>.simulation-primary-metrics{margin-top:1rem}
+.simulation-stage .progressive-content{padding:0}
+.simulation-settings details>summary{padding:.5rem 0;line-height:1.6}
+.simulation-bottom{align-items:start}
+@media(max-width:600px){.primary-kpis{grid-template-columns:1fr}.source-links{flex-direction:column;gap:.4rem}.simple-intro{padding:.75rem}.progressive>summary{padding:.85rem}.progressive-content{padding:.75rem}}
+
 /* Planner layout and panels. Side panels carry the blue corner bracket of the city portals. */
 .planner{display:grid;grid-template-columns:17.5rem minmax(0,1fr) 21.5rem;gap:1.75rem;align-items:start}
 .center-stack{display:grid;gap:1.5rem;min-width:0}

@@ -57,8 +57,9 @@ try {
     throw new Error('UI condition timed out: ' + expression);
   };
   const ready = () => waitFor(`Boolean(document.querySelector('#calculation-status')) && !document.querySelector('.shell.calculating')`);
-  const click = selector => evaluate(`document.querySelector(${JSON.stringify(selector)}).click()`);
-  const set = (selector, value, event = 'change') => evaluate(`{ const el = document.querySelector(${JSON.stringify(selector)}); el.value = ${JSON.stringify(String(value))}; el.dispatchEvent(new Event(${JSON.stringify(event)}, {bubbles:true})); }`);
+  const reveal = `for (let parent = el.parentElement; parent; parent = parent.parentElement) { if (parent.tagName === 'DETAILS') parent.open = true; }`;
+  const click = selector => evaluate(`{ const el = document.querySelector(${JSON.stringify(selector)}); ${reveal} el.click(); }`);
+  const set = (selector, value, event = 'change') => evaluate(`{ const el = document.querySelector(${JSON.stringify(selector)}); ${reveal} el.value = ${JSON.stringify(String(value))}; el.dispatchEvent(new Event(${JSON.stringify(event)}, {bubbles:true})); }`);
   await call('Runtime.enable'); await call('Page.enable');
   if (offline) {
     await call('Network.enable');
@@ -74,6 +75,18 @@ try {
   const initial = await evaluate(`({title:document.title, language:document.documentElement.lang, roofs:document.querySelectorAll('.portfolio-list .roof-row').length, geometry:document.querySelector('.map-label strong').textContent, budget:document.querySelector('#budget').value, streetTiles:document.querySelectorAll('.leaflet-tile-loaded').length})`);
   // The default 150 kWp cap per building spreads 5 mln zł over ten roofs instead of six.
   assert.equal(initial.roofs, 10);
+  assert.equal(await evaluate(`document.querySelectorAll('.primary-kpis > .kpi').length`), 3);
+  assert.ok(await evaluate(`!document.querySelector('[data-disclosure="plan-analysis"]').open && !document.querySelector('[data-disclosure="roof-data"]').open && !document.querySelector('#advanced').open`));
+  assert.ok(await evaluate(`document.querySelector('.source-record-link a').href.includes('where=') && document.querySelector('.source-record-link a').checkVisibility()`));
+  assert.ok(await evaluate(`document.querySelector('.source-links a').href.includes('MONIT-AIR')`));
+  const simplePlan = await call('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true });
+  await fs.writeFile(path.join(output, 'simple-plan.png'), Buffer.from(simplePlan.data, 'base64'));
+  await evaluate(`document.querySelector('[data-disclosure="roof-data"]').open = true`);
+  assert.ok(await evaluate(`document.querySelector('.area-explanation').innerText.includes('79,9%') && document.querySelector('.area-explanation').innerText.includes('powuzytecz')`));
+  await set('#budget', 4); await ready();
+  assert.ok(await evaluate(`document.querySelector('[data-disclosure="roof-data"]').open`), 'Expanded source details must survive budget recalculation.');
+  await set('#budget', 5); await ready();
+  await evaluate(`document.querySelector('[data-disclosure="roof-data"]').open = false`);
   assert.equal(await evaluate(`document.querySelectorAll('.rank-label').length`), 10);
   assert.ok(await evaluate(`document.querySelector('.kpis').textContent.includes('Na działkach miasta: 10')`));
   assert.equal(await evaluate(`document.querySelectorAll('.curve .curve-point').length`), 10);
@@ -200,9 +213,14 @@ try {
   const virtualRoofId = await evaluate(`document.querySelector('.detail-id').textContent`);
   assert.ok(await evaluate(`!document.querySelector('.main-nav [data-view="monitor"]')`));
   await click('[data-action="simulate-roof"]');
+  assert.ok(await evaluate(`!document.querySelector('[data-disclosure="sim-orientations"]').open && !document.querySelector('[data-disclosure="sim-camera"]').open && !document.querySelector('[data-disclosure="sim-weather"]').open`));
+  assert.equal(await evaluate(`document.querySelectorAll('.simulation-primary-metrics .simulation-metric').length`), 2);
+  assert.ok(await evaluate(`[...document.querySelectorAll('.simple-model-note .source-links a')].every(a => a.checkVisibility())`));
+  const simpleSimulation = await call('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true });
+  await fs.writeFile(path.join(output, 'simple-simulation.png'), Buffer.from(simpleSimulation.data, 'base64'));
   assert.ok(await evaluate(`Number(document.querySelector('.roof-scene').dataset.panelCount) > 0`));
   assert.ok(await evaluate(`document.querySelector('main').textContent.includes('PVGIS 5.3')`));
-  const metricValue = index => evaluate(`parseFloat(document.querySelectorAll('.simulation-metric strong')[${index}].textContent.replace(/\s/g, '').replace(',', '.'))`);
+  const metricValue = index => evaluate(`parseFloat(document.querySelectorAll('.simulation-primary-metrics .simulation-metric strong')[${index - 2}].textContent.replace(/\s/g, '').replace(',', '.'))`);
   const summerEnergy = await metricValue(2);
   await set('#sim-month', 1);
   assert.ok(await metricValue(2) < summerEnergy, 'Kraków winter should generate less than the summer example.');
@@ -210,6 +228,7 @@ try {
   await set('#sim-scenario', 'sunny');
   const sunnyEnergy = await metricValue(2);
   await set('#sim-scenario', 'cloudy');
+  assert.ok(await evaluate(`document.querySelector('[data-disclosure="sim-weather"]').open`), 'Weather controls must stay expanded after changing the profile.');
   assert.ok(await metricValue(2) < sunnyEnergy);
   const annualBeforeCamera = await metricValue(3);
   const sceneBefore = await evaluate(`document.querySelector('.roof-scene').innerHTML`);
@@ -234,8 +253,10 @@ try {
   await click('[data-action="simulation-reset"]');
   assert.equal(await evaluate(`document.querySelector('.simulation-clock strong').textContent`), '00:00');
   await set('#sim-speed', 1800);
+  await evaluate(`document.querySelector('[data-disclosure="sim-day"]').open = true`);
   await click('[data-action="simulation-start"]');
   await waitFor(`document.querySelector('.simulation-clock strong').textContent !== '00:00'`);
+  assert.ok(await evaluate(`document.querySelector('[data-disclosure="sim-day"]').open`), 'Day details must stay expanded during animation.');
   await click('[data-action="simulation-pause"]');
   const pausedClock = await evaluate(`document.querySelector('.simulation-clock strong').textContent`);
   await pause(400);
@@ -346,6 +367,7 @@ try {
   report.checks.push('numerical forecast explanation', 'open-data roof sketch', '8760-hour climate provenance', 'season and weather comparison', 'camera independent of physical orientation', 'snow and shade assumptions', 'orientation matrix', 'pause and scrub', 'simulation export provenance', 'simulation RU/PL', 'virtual map marker', 'simulation mobile and print');
   report.checks.push('number guide RU/PL and mobile', 'source/pilot/module area trace', 'keyboard focus and return from explanation', 'JSON v3 calculation provenance', 'missing register filters require positive matches');
   report.checks.push('absent climate disables simulation without fabricated data', 'no monitoring or USB workflow');
+  report.checks.push('three primary plan metrics', 'visible direct MSIP and PVGIS source links', 'source-area definition caveat', 'supporting detail collapsed initially', 'expanded source and weather sections survive recalculation', 'expanded day details survive animation');
   await fs.writeFile(path.join(output, 'browser-qa.json'), JSON.stringify(report, null, 2));
   assert.deepEqual(errors, []);
   console.log(JSON.stringify(report, null, 2));
