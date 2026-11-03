@@ -13,7 +13,7 @@ await fs.mkdir(output, { recursive: true });
 const profile = await fs.mkdtemp(path.join(output, 'chrome-'));
 const processHandle = spawn(browser, [
   '--headless=new', '--no-first-run', '--no-default-browser-check', '--disable-background-networking',
-  '--disable-extensions', '--disable-sync', '--remote-debugging-port=0',
+  '--disable-extensions', '--disable-sync', '--remote-debugging-port=0', '--accept-lang=pl-PL,pl',
   `--user-data-dir=${profile}`, '--window-size=1440,1050', targetUrl,
 ], { windowsHide: true, stdio: ['ignore', 'ignore', 'pipe'] });
 const browserLogs = [];
@@ -213,54 +213,86 @@ try {
   const virtualRoofId = await evaluate(`document.querySelector('.detail-id').textContent`);
   assert.ok(await evaluate(`!document.querySelector('.main-nav [data-view="monitor"]')`));
   await click('[data-action="simulate-roof"]');
-  assert.ok(await evaluate(`!document.querySelector('[data-disclosure="sim-orientations"]').open && !document.querySelector('[data-disclosure="sim-camera"]').open && !document.querySelector('[data-disclosure="sim-weather"]').open`));
-  assert.equal(await evaluate(`document.querySelectorAll('.simulation-primary-metrics .simulation-metric').length`), 2);
-  assert.ok(await evaluate(`[...document.querySelectorAll('.simple-model-note .source-links a')].every(a => a.checkVisibility())`));
-  const simpleSimulation = await call('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true });
+  assert.ok(await evaluate(`!document.querySelector('[data-disclosure="sim-method"]').open && !document.querySelector('[data-disclosure="sim-camera"]').open && !document.querySelector('[data-disclosure="sim-layout"]').open`));
+  assert.equal(await evaluate(`document.querySelectorAll('.simulation-primary-metrics .simulation-metric').length`), 4);
+  assert.ok(await evaluate(`[...document.querySelectorAll('.sim-sources a')].every(a => a.checkVisibility())`));
+  // One screen: inputs, sketch with its day and playback, and all results fit a 1440 × 900 laptop.
+  await call('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
+  await evaluate('window.scrollTo(0, 0)');
+  assert.ok(await evaluate(`['.sim-controls', '.sim-playback', '.sim-results'].every(s => document.querySelector(s).getBoundingClientRect().bottom <= innerHeight)`), 'Simulation does not fit one 1440×900 screen.');
+  const simpleSimulation = await call('Page.captureScreenshot', { format: 'png' });
   await fs.writeFile(path.join(output, 'simple-simulation.png'), Buffer.from(simpleSimulation.data, 'base64'));
+  await call('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1050, deviceScaleFactor: 1, mobile: false });
   assert.ok(await evaluate(`Number(document.querySelector('.roof-scene').dataset.panelCount) > 0`));
   assert.ok(await evaluate(`document.querySelector('main').textContent.includes('PVGIS 5.3')`));
-  const metricValue = index => evaluate(`parseFloat(document.querySelectorAll('.simulation-primary-metrics .simulation-metric strong')[${index - 2}].textContent.replace(/\s/g, '').replace(',', '.'))`);
-  const summerEnergy = await metricValue(2);
-  await set('#sim-month', 1);
-  assert.ok(await metricValue(2) < summerEnergy, 'Kraków winter should generate less than the summer example.');
-  await set('#sim-month', 7);
-  await set('#sim-scenario', 'sunny');
-  const sunnyEnergy = await metricValue(2);
-  await set('#sim-scenario', 'cloudy');
-  assert.ok(await evaluate(`document.querySelector('[data-disclosure="sim-weather"]').open`), 'Weather controls must stay expanded after changing the profile.');
-  assert.ok(await metricValue(2) < sunnyEnergy);
-  const annualBeforeCamera = await metricValue(3);
+  // Tiles: 0 year, 1 day, 2 capacity, 3 row-to-row shading loss.
+  const kpi = index => evaluate(`parseFloat(document.querySelectorAll('.simulation-primary-metrics .simulation-metric strong')[${index}].firstChild.textContent.replace(/\\s/g, '').replace('−', '-').replace(',', '.'))`);
+  const summerEnergy = await kpi(1);
+  await click('[data-action="simulation-season"][data-month="1"]');
+  assert.ok(await kpi(1) < summerEnergy, 'Kraków winter should generate less than the summer example.');
+  await click('[data-action="simulation-season"][data-month="7"]');
+  await evaluate(`document.querySelector('[data-disclosure="sim-layout"]').open = true`);
+  await click('[data-action="simulation-weather"][data-scenario="sunny"]');
+  const sunnyEnergy = await kpi(1);
+  await click('[data-action="simulation-weather"][data-scenario="cloudy"]');
+  assert.ok(await evaluate(`document.querySelector('[data-disclosure="sim-layout"]').open`), 'Row settings must stay expanded after changing the day.');
+  assert.ok(await kpi(1) < sunnyEnergy);
+  const annualBeforeCamera = await kpi(0);
   const sceneBefore = await evaluate(`document.querySelector('.roof-scene').innerHTML`);
   await set('#sim-viewYaw', 95);
   assert.notEqual(await evaluate(`document.querySelector('.roof-scene').innerHTML`), sceneBefore);
-  assert.equal(await metricValue(3), annualBeforeCamera);
+  assert.equal(await kpi(0), annualBeforeCamera);
+  const dragBox = await evaluate(`{ const r = document.querySelector('#simulation-frame').getBoundingClientRect(); ({ x: r.x + r.width / 2, y: r.y + r.height / 3 }); }`);
+  const sceneBeforeDrag = await evaluate(`document.querySelector('.roof-scene').innerHTML`);
+  await call('Input.dispatchMouseEvent', { type: 'mousePressed', x: dragBox.x, y: dragBox.y, button: 'left', buttons: 1, clickCount: 1 });
+  for (let i = 1; i <= 5; i++) await call('Input.dispatchMouseEvent', { type: 'mouseMoved', x: dragBox.x + i * 20, y: dragBox.y, button: 'left', buttons: 1 });
+  await call('Input.dispatchMouseEvent', { type: 'mouseReleased', x: dragBox.x + 100, y: dragBox.y, button: 'left', buttons: 0, clickCount: 1 });
+  await waitFor(`document.querySelector('.roof-scene').innerHTML !== ${JSON.stringify(sceneBeforeDrag)}`);
+  assert.equal(await kpi(0), annualBeforeCamera, 'Dragging the camera must not change energy.');
   await set('#sim-tilt', 60);
   assert.equal(await evaluate(`document.querySelector('.roof-scene').dataset.tilt`), '60');
   await click('[data-action="simulation-variant"][data-tilt="30"][data-azimuth="180"]');
   assert.ok(await evaluate(`document.querySelector('[data-action="simulation-variant"][data-tilt="30"][data-azimuth="180"]').classList.contains('selected')`));
-  await set('#sim-comparison', 'month');
+  await click('[data-action="simulation-period"][data-period="month"]');
   assert.ok(await evaluate(`Boolean(document.querySelector('.best-configuration'))`));
+  // Rows shade each other in winter: the strip is drawn, and the suggested gap cuts the annual loss.
+  await click('[data-action="simulation-season"][data-month="12"]');
+  await set('#sim-timeSeconds', 36000);
+  assert.ok(await evaluate(`document.querySelectorAll('.roof-scene polygon[fill="#0a1b2b"]').length > 0`), 'Winter row shadows are not drawn.');
+  const tightLoss = await kpi(3);
+  assert.ok(tightLoss < -2, 'Rows 0.8 m apart at 30° should lose several percent.');
+  // "Find the maximum" searches tilt, direction and gap on this outline; the sketch changes only when applied.
+  const annualBeforeSearch = await kpi(0);
+  await click('#sim-optimize');
+  await waitFor(`Boolean(document.querySelector('#sim-apply-optimum') || document.querySelector('.sim-optimum.is-current'))`);
+  assert.equal(await kpi(0), annualBeforeSearch, 'The search must not change the sketch before it is applied.');
+  if (await evaluate(`Boolean(document.querySelector('#sim-apply-optimum'))`)) await click('#sim-apply-optimum');
+  assert.ok(await kpi(0) >= annualBeforeSearch && await evaluate(`Boolean(document.querySelector('.sim-optimum.is-current'))`));
+  await click('[data-action="simulation-variant"][data-tilt="30"][data-azimuth="180"]');
+  await set('#sim-rowGapM', 0.8);
+  // Snow is a winter assumption: December goes dark, July keeps producing.
   await set('#sim-snowPercent', 100);
-  assert.equal(await metricValue(2), 0); assert.equal(await metricValue(3), 0);
+  assert.equal(await kpi(1), 0);
+  await click('[data-action="simulation-season"][data-month="7"]');
+  assert.ok(await kpi(1) > 0 && await kpi(0) < annualBeforeCamera);
   await set('#sim-snowPercent', 0);
   await set('#sim-shadePercent', 100);
-  assert.equal(await metricValue(2), 0);
+  assert.equal(await kpi(1), 0);
   await set('#sim-shadePercent', 0);
-  await set('#sim-scenario', 'typical');
+  await click('[data-action="simulation-weather"][data-scenario="typical"]');
   await set('#sim-viewYaw', 25);
   await set('#sim-timeSeconds', 43200);
   await click('[data-action="simulation-reset"]');
-  assert.equal(await evaluate(`document.querySelector('.simulation-clock strong').textContent`), '00:00');
+  assert.equal(await evaluate(`document.querySelector('.simulation-clock').textContent`), '00:00');
   await set('#sim-speed', 1800);
-  await evaluate(`document.querySelector('[data-disclosure="sim-day"]').open = true`);
-  await click('[data-action="simulation-start"]');
-  await waitFor(`document.querySelector('.simulation-clock strong').textContent !== '00:00'`);
-  assert.ok(await evaluate(`document.querySelector('[data-disclosure="sim-day"]').open`), 'Day details must stay expanded during animation.');
-  await click('[data-action="simulation-pause"]');
-  const pausedClock = await evaluate(`document.querySelector('.simulation-clock strong').textContent`);
+  await click('[data-action="simulation-toggle"]');
+  // Playback skips the night: it starts an hour before sunrise, not at midnight.
+  await waitFor(`document.querySelector('.simulation-clock').textContent >= '02:00'`);
+  assert.ok(await evaluate(`document.querySelector('[data-disclosure="sim-layout"]').open`), 'Row settings must stay expanded during animation.');
+  await click('[data-action="simulation-toggle"]');
+  const pausedClock = await evaluate(`document.querySelector('.simulation-clock').textContent`);
   await pause(400);
-  assert.equal(await evaluate(`document.querySelector('.simulation-clock strong').textContent`), pausedClock);
+  assert.equal(await evaluate(`document.querySelector('.simulation-clock').textContent`), pausedClock);
   await set('#sim-timeSeconds', 43200);
   await click('[data-explain="simGeometry"]');
   assert.equal(await evaluate('document.activeElement.id'), 'explain-simGeometry');
@@ -274,6 +306,7 @@ try {
   assert.equal(virtualArchive.forecast.months.length, 12);
   assert.ok(virtualArchive.layout.fittedPanelCount > 0);
   assert.ok(virtualArchive.layout.capacityKwp <= 150);
+  assert.ok(virtualArchive.rowShading.annualLossPercent > 0);
   await click('[data-action="export-csv"]');
   assert.ok((await evaluate('globalThis.lastExport.text()')).includes('SIMULATION'));
   await click('[data-language="pl"]');
@@ -364,10 +397,10 @@ try {
   await call('Page.reload', { ignoreCache: true }); await ready();
   const report = { offline, initial, checks: [offline ? 'street tiles intentionally blocked' : 'street tiles', 'Polish default without Cyrillic', 'text size and contrast version', 'budget curve', 'approval routes', 'saved variants', 'cap removal and concentration warning', 'roof evidence statuses', 'data filter and sort', '15-roof review CSV RU/PL', 'roof click and summary', 'wheel zoom', 'mouse drag', 'viewport preserved across recalculation', 'roof focus', 'zero budget', 'budget recalculation', 'exclude and restore', 'Russian CSV', 'RU/PL switch', 'data search', 'method view', 'green filter', 'offline basemap fallback', 'print report and PDF', 'mobile overflow'], runtimeErrors: errors };
   report.version = '0.7.0';
-  report.checks.push('numerical forecast explanation', 'open-data roof sketch', '8760-hour climate provenance', 'season and weather comparison', 'camera independent of physical orientation', 'snow and shade assumptions', 'orientation matrix', 'pause and scrub', 'simulation export provenance', 'simulation RU/PL', 'virtual map marker', 'simulation mobile and print');
+  report.checks.push('numerical forecast explanation', 'open-data roof sketch', '8760-hour climate provenance', 'season and weather comparison', 'camera independent of physical orientation', 'snow limited to winter months and shade assumptions', 'orientation matrix with row gap', 'row-to-row shading', 'best-configuration search and apply', 'drag to rotate', 'simulation fits one 1440x900 screen', 'pause, scrub and night skip', 'simulation export provenance', 'simulation RU/PL', 'virtual map marker', 'simulation mobile and print');
   report.checks.push('number guide RU/PL and mobile', 'source/pilot/module area trace', 'keyboard focus and return from explanation', 'JSON v3 calculation provenance', 'missing register filters require positive matches');
   report.checks.push('absent climate disables simulation without fabricated data', 'no monitoring or USB workflow');
-  report.checks.push('three primary plan metrics', 'visible direct MSIP and PVGIS source links', 'source-area definition caveat', 'supporting detail collapsed initially', 'expanded source and weather sections survive recalculation', 'expanded day details survive animation');
+  report.checks.push('three primary plan metrics', 'visible direct MSIP and PVGIS source links', 'source-area definition caveat', 'supporting detail collapsed initially', 'expanded source and row sections survive recalculation', 'expanded row details survive animation');
   await fs.writeFile(path.join(output, 'browser-qa.json'), JSON.stringify(report, null, 2));
   assert.deepEqual(errors, []);
   console.log(JSON.stringify(report, null, 2));

@@ -4,7 +4,7 @@ W aplikacji otwórz „Jak czytać” lub wybierz `?` przy wyniku. Zobaczysz tak
 
 ## Jednostki: m², kWp, kWh, MWh
 
-m² to powierzchnia. kWp to moc znamionowa modułów w warunkach standardowych, a nie stała produkcja. kW to moc chwilowa; kWh to energia w okresie. Prognoza roczna i energia z 90 sekund dotyczą innych okresów.
+m² to powierzchnia. kWp to moc znamionowa modułów w warunkach standardowych. kW to moc w danej chwili, kWh — energia w okresie. Prognoza roczna i energia dnia w symulacji dotyczą innych okresów.
 
 Wzór / reguła:
 
@@ -16,7 +16,7 @@ Wzór / reguła:
 
 ## Mapa, numery i kolory
 
-Obrys to rzut budynku z MSIP, nie układ modułów. Czerwone dachy i numery to wybrany plan, uporządkowany według prognozy rocznej. Niebieskie spełniają filtry; szare ich nie spełniają. Kliknięcie wybiera kartę, ale nie dodaje dachu do planu. Fioletowy znacznik wskazuje dach bieżącego szkicu PV.
+Obrys to rzut budynku z MSIP, nie układ modułów. Czerwone z numerami to plan, według malejącej prognozy rocznej. Niebieskie spełniają filtry, szare nie. Kliknięcie otwiera kartę, ale nie dodaje dachu do planu. Fioletowy znacznik to dach szkicu PV.
 
 Wzór / reguła:
 
@@ -28,7 +28,7 @@ Wzór / reguła:
 
 ## Roczna produkcja planu
 
-Suma modelowanej energii elektrycznej wyłącznie wybranych dachów w roku. To prognoza, nie odczyt licznika ani gwarantowana oszczędność. Zmiana parametrów lub filtrów uruchamia dobór ponownie.
+Suma prognozy rocznej wybranych dachów. To wynik modelu, nie odczyt licznika. Zmiana parametrów lub filtrów uruchamia dobór od nowa.
 
 Wzór / reguła:
 
@@ -40,7 +40,7 @@ Eplan [MWh/rok] = Σ Eᵢ [kWh/rok] / 1 000
 
 ## Nakłady i pozostały budżet
 
-Jednorazowe nakłady wybranych instalacji według wpisanych cen, nie kosztorys dostawcy. Podatki, wzmocnienie dachu, eksploatacja, finansowanie, magazyn i przyłącze nie są wyceniane osobno. Pozostały budżet to budżet minus suma kosztów.
+Jednorazowe nakłady wybranych instalacji według wpisanych przez Ciebie cen. Podatki, wzmocnienie dachu, eksploatacja, finansowanie, magazyn i przyłącze nie są liczone osobno. Pozostały budżet to budżet minus nakłady.
 
 Wzór / reguła:
 
@@ -52,7 +52,7 @@ Cplan = Σ (Pᵢ × c + Cfixed); remaining = B − Cplan
 
 ## Liczby: pilotaż, kandydaci i plan
 
-927 to obiekty pilotażu badawczego, nie wszystkie dachy Krakowa. Kandydaci spełniają aktywne filtry; dostępne finansowo mają dodatnią produkcję i pojedynczo mieszczą się w budżecie. Plan obejmuje wybrany zestaw. Działki miasta i znalezione adresy są liczone wśród wybranych dachów.
+927 to obiekty pilotażu badawczego, nie wszystkie dachy Krakowa. Kandydaci spełniają aktywne filtry; dostępne finansowo mają też dodatnią produkcję i pojedynczo mieszczą się w budżecie. Działki miasta i adresy liczymy wśród dachów planu.
 
 Wzór / reguła:
 
@@ -64,7 +64,7 @@ Nplan = selectedIds.length; Ncandidates = candidates.length
 
 ## Szacunek CO₂
 
-Prognoza roczna jest mnożona przez wybrany wskaźnik sieci. Domyślnie 553 kg CO₂/MWh: KOBiZE, dane za 2024 r., publikacja 12.2025. To scenariusz zastąpienia energii sieciowej, bez cyklu życia modułów; efekt nie jest zmierzony. Zapisany wskaźnik użytkownika nie jest automatycznie zmieniany.
+Prognoza roczna × wskaźnik sieci: domyślnie 553 kg CO₂/MWh (KOBiZE, dane za 2024 r., publikacja 12.2025). To zastąpienie energii z sieci, bez cyklu życia modułów. Zapisany własny wskaźnik nie zmienia się automatycznie.
 
 Wzór / reguła:
 
@@ -76,7 +76,7 @@ CO₂ [t/rok] = E [kWh/rok] / 1 000 × f [kg/MWh] / 1 000
 
 ## Nakłady na jednostkę prognozy rocznej
 
-Jednorazowe nakłady dzielimy przez roczną prognozę w MWh. To wskaźnik porównawczy w zł/(MWh/rok). Nie jest ceną sprzedaży prądu, okresem zwrotu ani LCOE: nie uwzględnia lat pracy i eksploatacji.
+Jednorazowe nakłady na 1 MWh prognozy rocznej, w zł/(MWh/rok). Służy do porównania wariantów. To nie LCOE ani okres zwrotu: lata pracy i eksploatacja nie są uwzględnione.
 
 Wzór / reguła:
 
@@ -88,7 +88,7 @@ Cplan / (Eplan / 1 000)
 
 ## Powierzchnia budynku i obrysu
 
-powbudynku to pole budynku z MONIT-AIR. Niezależne sprawdzenie obrysu używa lokalnej płaszczyzny metrycznej z parametrami elipsoidy WGS84 i odejmuje otwory. To rzut poziomy, nie suma powierzchni kondygnacji, pole połaci ani zmierzona powierzchnia modułów.
+powbudynku to pole budynku z MONIT-AIR. Dla kontroli liczymy pole obrysu w lokalnej płaszczyźnie metrycznej (elipsoida WGS84) bez otworów. To rzut poziomy, nie suma kondygnacji ani pole połaci.
 
 Wzór / reguła:
 
@@ -100,7 +100,7 @@ Aoutline ≈ Σ polygon outer areas − Σ holes [m²]
 
 ## Powierzchnia użyteczna ze źródła
 
-Do obliczeń zachowujemy powuzytecz zaokrąglone w źródłowym HTML do pełnego m². Wszystkie 927 wartości porównano z zapisanym MSIP. W każdej pozycji powuzytecz ≈ 79,9% powbudynku; reguła tej redukcji nie została potwierdzona. To powierzchnia modelowa, nie inwentaryzacja wolnego miejsca. Nie zwiększano jej ze zdjęć ani liczby kondygnacji.
+Do obliczeń bierzemy powuzytecz zaokrąglone w źródłowym HTML do pełnego m²; wszystkie 927 wartości porównano z zapisanym MSIP. Wszędzie powuzytecz ≈ 79,9% powbudynku; reguły tej redukcji nie potwierdzono. Nie zwiększano jej według zdjęć ani kondygnacji.
 
 Wzór / reguła:
 
@@ -112,7 +112,7 @@ A = round(MSIP.powuzytecz), |ΔA| ≤ 0,5 m²
 
 ## Powierzchnia modułów po ograniczeniu
 
-Najpierw bierzemy wybrany udział powierzchni użytecznej, następnie zmniejszamy go, jeśli działa limit mocy. Przy sprawności 20% limit 150 kWp odpowiada 750 m² modułów. Nie projektujemy odsunięć, przejść, mocowań ani układu; źródłowe 79,9% i nasz udział 60% to dwa osobne etapy redukcji.
+Bierzemy wybrany udział powierzchni użytecznej i zmniejszamy go, gdy działa limit mocy: przy sprawności 20% limit 150 kWp to 750 m² modułów. Odsunięć, przejść i mocowań nie projektujemy. 79,9% źródła i nasze 60% to dwie osobne redukcje.
 
 Wzór / reguła:
 
@@ -124,7 +124,7 @@ Apanels = A × coverage × scale = P / (η × 1 kW/m²)
 
 ## Promieniowanie: średnia i suma
 
-sredniepc to średnie roczne promieniowanie modelu źródłowego; sumapc to suma padającej energii słonecznej. To jeszcze nie prąd. Do produkcji stosujemy sumapc bezpośrednio. Iloczyn zaokrąglonej średniej i powierzchni nie musi dokładnie odtwarzać sumapc: to osobne pola zagregowanego źródła.
+sredniepc to średnie roczne promieniowanie na m² według modelu źródła, sumapc — cała padająca energia słoneczna w roku. To jeszcze nie prąd. Do obliczeń bierzemy sumapc; zaokrąglona średnia × powierzchnia może się od niej nieco różnić.
 
 Wzór / reguła:
 
@@ -136,7 +136,7 @@ Gsource = sredniepc [kWh/m²/rok]; S = sumapc [kWh/rok]
 
 ## Moc: potencjał i scenariusz
 
-Moc przed limitem wynika z powierzchni modułów i sprawności przy natężeniu odniesienia 1 kW/m². Wynik to mniejsza z mocy potencjalnej i limitu. To scenariusz mocy modułów DC, nie potwierdzona moc falownika AC ani przyłącza.
+Moc przed limitem to pole modułów × sprawność przy natężeniu odniesienia 1 kW/m². Wynik to mniejsza z tej mocy i wybranego limitu. To moc modułów DC, nie falownika AC ani przyłącza.
 
 Wzór / reguła:
 
@@ -148,7 +148,7 @@ P₀ = A × coverage × η; P = min(P₀, limit), scale = P/P₀; limit=0 → P=
 
 ## Roczna prognoza jednego dachu
 
-Padającą energię słoneczną mnożymy przez udział powierzchni, sprawność, współczynnik systemowy PR i skalę ograniczenia mocy. Zakładamy proporcjonalny udział promieniowania na zajętej części. Bez układu modułów i zmierzonej pogody nie znamy z góry znaku błędu prognozy.
+Padającą energię słoneczną mnożymy przez udział powierzchni, sprawność, PR i skalę ograniczenia. Zakładamy, że zajęta część dachu dostaje średnie promieniowanie. Bez układu modułów i zmierzonej pogody błąd może iść w obie strony.
 
 Wzór / reguła:
 
@@ -160,7 +160,7 @@ E [kWh/rok] = S × coverage × η × PR × scale
 
 ## Uzysk jednostkowy
 
-Roczna prognoza na 1 kWp. Dokładny wzór aplikacji to (sumapc / zaokrąglona powierzchnia użyteczna) × PR; pole sredniepc może się różnić. Limit skaluje moc i energię proporcjonalnie, więc stosunek pozostaje stały.
+Roczna prognoza na 1 kWp: (sumapc / zaokrąglona powierzchnia użyteczna) × PR. Pole sredniepc może dać nieco inną wartość. Limit zmniejsza moc i energię w tej samej proporcji, więc stosunek się nie zmienia.
 
 Wzór / reguła:
 
@@ -172,7 +172,7 @@ Y [kWh/kWp/rok] = E/P = (S/A) × PR
 
 ## Porównanie z PVGIS
 
-Średnią MONIT-AIR dzielimy przez 1 140,9 kWh/m²/rok z zapisanego poziomego przykładu PVGIS w centrum Krakowa. To porównanie różnych modeli i okresów, nie procent zacienienia ani kontrola dokładności konkretnego dachu. Zgodność około 2% w jednym przykładzie nie jest kalibracją.
+Średnią MONIT-AIR dzielimy przez 1 140,9 kWh/m²/rok — zapisany poziomy przykład PVGIS dla centrum Krakowa. Modele i okresy są różne, więc to nie procent cienia. Zgodność około 2% w jednym przykładzie to jeszcze nie kalibracja.
 
 Wzór / reguła:
 
@@ -184,7 +184,7 @@ index [%] = 100 × sredniepc / PVGIS.Ghorizontal
 
 ## Budżet
 
-Twój górny limit jednorazowych nakładów. Wartość 5 oznacza 5 milionów zł, nie 5 zł. Domyślne 5 mln to założenie demonstracyjne, nie zatwierdzony budżet miasta. Wybieramy całe instalacje według scenariusza; reszta budżetu nie finansuje dodatkowej części instalacji.
+Górny limit jednorazowych nakładów. 5 w polu to 5 mln zł. Domyślne 5 mln to założenie demonstracyjne, nie zatwierdzony budżet miasta. Dach wchodzi całą instalacją; reszta budżetu nie finansuje części kolejnej.
 
 Wzór / reguła:
 
@@ -196,7 +196,7 @@ B [zł] = input × 1 000 000; Σ Cᵢ ≤ B
 
 ## Udział powierzchni pod moduły
 
-Wpis użytkownika: domyślnie 60% powierzchni już użytecznej, nie całego budynku. To dodatkowe założenie, nie reguła MSIP. Przy limicie mocy efektywny udział może być mniejszy; pokazuje go obliczenie dachu.
+Ustawiasz Ty: domyślnie 60% powierzchni użytecznej, nie całego budynku. To założenie scenariusza, nie reguła MSIP. Przy limicie mocy efektywny udział może być mniejszy — widać go w obliczeniu dachu.
 
 Wzór / reguła:
 
@@ -208,7 +208,7 @@ coverage = input[%]/100; effective coverage = coverage × scale
 
 ## Sprawność modułów
 
-Domyślnie 20%, założenie bez wybranego modelu modułu. Określa moc znamionową na m² i konwersję energii słonecznej na elektryczną. Nie jest to PR ani łączna strata całej instalacji.
+Domyślnie 20%, bez wybranego modelu modułu. Określa moc na m² i część energii słonecznej zamienianej na prąd. Straty całej instalacji opisuje PR, nie sprawność.
 
 Wzór / reguła:
 
@@ -220,7 +220,7 @@ Wzór / reguła:
 
 ## PR: współczynnik systemowy
 
-Domyślnie 80% = 0,8: zachowujemy 80% wyniku po sprawności, dodatkowe umowne straty to 20%. Założenie obejmuje falownik, temperaturę, przewody i inne czynniki, nie jest pomiarem. Nie dodaje nowego obliczenia nachylenia lub cienia.
+Domyślnie 80% = 0,8: po sprawności zostaje 80%, a 20% to umowne straty falownika, temperatury, przewodów i inne. To założenie, nie pomiar; nachylenia i cienia nie liczymy na nowo.
 
 Wzór / reguła:
 
@@ -232,7 +232,7 @@ PR = input[%]/100; E = EbeforePR × PR
 
 ## Limit mocy: 150, 50 lub bez limitu
 
-To wybrany rozmiar instalacji na budynek. 150 kWp rozkłada budżet na więcej dachów. Progi 6,5 / 50 / 150 kW służą wstępnemu grupowaniu procedur; moc DC nie zastępuje definicji prawnej, oceny ochrony, przyłącza i projektu. 0 wyłącza limit.
+Wybrany rozmiar instalacji na budynek. 150 kWp rozkłada budżet na więcej dachów, 0 wyłącza limit. Progi 6,5 / 50 / 150 kW służą wstępnemu grupowaniu procedur; moc w sensie prawnym, ochronę, przyłącze i projekt sprawdza się osobno.
 
 Wzór / reguła:
 
@@ -244,7 +244,7 @@ P = limit > 0 ? min(P₀, limit) : P₀
 
 ## Cena za kWp
 
-Domyślnie 4 000 zł za kWp: cena scenariusza, nie oferta rynkowa. Stosujemy ją do mocy po limicie. Zakres ceny, VAT i data oferty nie są określone.
+Domyślnie 4 000 zł za kWp — cena scenariusza, nie oferta rynkowa. Stosujemy ją do mocy po limicie. Zakres ceny, VAT i data oferty nie są określone.
 
 Wzór / reguła:
 
@@ -256,7 +256,7 @@ Cvariable = P × c [zł/kWp]
 
 ## Koszt stały
 
-Domyślnie 15 000 zł na każdą wybraną instalację. Dodajemy raz na budynek niezależnie od mocy. To umowny dodatek, nie potwierdzony koszt projektu i przyłącza.
+Domyślnie 15 000 zł na każdą wybraną instalację: raz na budynek, niezależnie od mocy. To umowny dodatek, nie potwierdzony koszt projektu i przyłącza.
 
 Wzór / reguła:
 
@@ -268,7 +268,7 @@ Cᵢ = round((Pᵢ × c + Cfixed) × 100) / 100
 
 ## Minimalna moc
 
-Domyślnie 3 kWp. Mniejsze instalacje nie uczestniczą w doborze. To próg scenariusza, nie stwierdzenie technicznej niemożliwości mniejszych instalacji.
+Domyślnie 3 kWp. Mniejsze instalacje nie biorą udziału w doborze. To próg scenariusza, nie ograniczenie techniczne.
 
 Wzór / reguła:
 
@@ -292,7 +292,7 @@ Ymin = 0 → off; otherwise E/P ≥ Ymin
 
 ## Wskaźnik sieci
 
-Pole edytowalne. 553 to zaktualizowane założenie według KOBiZE 12.2025, dane 2024. Dawne 597 dotyczy danych 2023. CO₂ nie oznacza pełnego cyklu życia CO₂e.
+Pole można zmienić. 553 to wartość bazowa według KOBiZE 12.2025 (dane za 2024 r.); dawne 597 dotyczy danych za 2023 r. To CO₂ sieci, nie pełny cykl życia CO₂e.
 
 Wzór / reguła:
 
@@ -304,7 +304,7 @@ f [kg CO₂/MWh]; result = E/1 000 × f/1 000 [t]
 
 ## Filtry działek, EGiB i ochrony
 
-Działki miasta obejmują gminę, współwłasność gminy i powiat grodzki; nie ustala to właściciela ani zarządcy budynku. EGiB oznacza dopasowanie identyfikatora w zapisanej ewidencji; brak nie dowodzi rozbiórki. Sygnały ochrony wymagają oceny; UNESCO lub park kulturowy nie dowodzą konkretnego obowiązku pozwolenia. Flagi zieleni i inwestycji pochodzą z pilotażu i nie potwierdzają PV.
+Działki miasta to gmina, współwłasność gminy i powiat grodzki; nie wskazuje to właściciela ani zarządcy budynku. EGiB to dopasowanie ID w zapisanej ewidencji, brak nie oznacza rozbiórki. Ochrona (UNESCO, park kulturowy) wymaga oceny. Flagi zieleni i inwestycji pochodzą z pilotażu.
 
 Wzór / reguła:
 
@@ -316,7 +316,7 @@ Neligible = count(all active filters pass); unknown ≠ verified
 
 ## Adres, odległość i numer działki
 
-649 adresów to kandydaci: 254 punkty w obrysie i 395 najbliższych do 30 m od krawędzi. Pozostałe 278 bez adresu. Dzielnica może pochodzić z punktu do 500 m. Działkę i obręb odczytujemy z ID budynku. Numer budynku w ID nie jest numerem ulicznym.
+649 adresów to kandydaci: 254 punkty w obrysie i 395 najbliższych do 30 m od krawędzi; 278 dachów bez adresu. Dzielnica może pochodzić z punktu do 500 m. Działkę i obręb odczytujemy z ID budynku; numer budynku w ID to nie numer uliczny.
 
 Wzór / reguła:
 
@@ -328,7 +328,7 @@ address: inside OR distance ≤ 30 m; district fallback ≤ 500 m
 
 ## Liczniki sprawdzeń i rejestrów
 
-Liczniki karty to automatyczne stany siedmiu kontroli: geometria, EGiB, adres, działka, własność, ochrona, PV. Nie oznaczają siedmiu ukończonych oględzin. Zbiorcze liczby to dopasowania pól w pilotażu; kategorie ochrony mogą się nakładać. OZE na tej samej działce lub obok nie oznacza PV na tym dachu.
+Liczniki karty to automatyczne stany siedmiu kontroli: geometria, EGiB, adres, działka, własność, ochrona, PV. Liczby rejestrów to dopasowania pól w pilotażu; kategorie ochrony mogą się nakładać. OZE na działce lub obok nie oznacza PV na tym dachu.
 
 Wzór / reguła:
 
@@ -340,7 +340,7 @@ Ncategory = count(matched field); union ≠ sum(overlapping categories)
 
 ## Daty, wersja i dokładność
 
-Atlas 2016 to nazwa historycznego zbioru, nie potwierdzona data pomiaru każdego dachu. Zapis słoneczny pobrano 25.10.2026, adresy i rejestry 26.10.2026. Pobranie nie aktualizuje historycznych danych. Współrzędne i miejsca po przecinku nie dowodzą dokładności oględzin. Strony po 25 wierszy i kolejka 15 obiektów to ustawienia interfejsu.
+Atlas 2016 to nazwa historycznego zbioru, nie data pomiaru każdego dachu. Zapis słoneczny pobrano 25.10.2026, adresy i rejestry 26.10.2026. Miejsca po przecinku to zaokrąglenie, nie dokładność pomiaru. 25 wierszy na stronie i kolejka 15 obiektów to ustawienia interfejsu.
 
 Wzór / reguła:
 
@@ -352,7 +352,7 @@ retrievedAt ≠ surveyDate; displayed value = rounded calculation
 
 ## Progi procedur i liczba instalacji
 
-Grupujemy moc według progów ≤6,5; >6,5–50; >50–150; >150 kWp. Ogólne reguły powyżej 6,5 kW obejmują uzgodnienie ppoż. i zawiadomienie PSP; 50 kW to granica mikroinstalacji, 150 kW — ogólny próg budowlany. Ochronę i przyłącze sprawdza się osobno. To wskazówka, nie pełna lista decyzji.
+Grupy mocy: ≤6,5; >6,5–50; >50–150; >150 kWp. Według ogólnych reguł powyżej 6,5 kW potrzebne są uzgodnienie ppoż. i zawiadomienie PSP; 50 kW to granica mikroinstalacji, 150 kW — ogólny próg budowlany. Ochronę i przyłącze sprawdza się osobno.
 
 Wzór / reguła:
 
@@ -364,7 +364,7 @@ Nclass = count(P within class); Σ Nclass = Nplan
 
 ## Trzy strategie i poprawa
 
-Porównujemy tych samych kandydatów i budżet: największe E, najlepsze E/C i programowanie dynamiczne z zaokrągleniem kosztów. Pokazujemy najlepszy z trzech wyników, bez dowodu globalnego optimum. Poprawę liczymy tylko względem pierwszej strategii zachłannej.
+Ci sami kandydaci i budżet, trzy strategie: najpierw największe E, najpierw najlepsze E/C oraz programowanie dynamiczne z zaokrągleniem kosztów. Pokazujemy najlepszy wynik; globalnego optimum nie dowodzimy. Poprawę liczymy względem pierwszej, zachłannej strategii.
 
 Wzór / reguła:
 
@@ -376,7 +376,7 @@ gain [%] = 100 × (Ebest / Elargest − 1)
 
 ## Luka i krok zaokrąglenia
 
-Górna granica pozwala kupować części instalacji, czego plan nie dopuszcza. Luka ogranicza możliwą poprawę tej samej matematycznej funkcji celu, nie błąd prognozy słonecznej. Koszt w DP zaokrąglamy w górę; końcowe nakłady liczymy z oryginalnych kosztów w groszach.
+Górna granica pozwala brać części instalacji, czego plan nie robi. Luka to maksymalna możliwa poprawa w tym samym modelu, nie błąd prognozy słonecznej. W DP koszt zaokrąglamy w górę; końcowe nakłady liczymy z dokładnych kosztów w groszach.
 
 Wzór / reguła:
 
@@ -388,7 +388,7 @@ gap = 100 × (Eupper − Ebest)/Eupper; step = max(0,01 zł, ceil(B×100/5000)/1
 
 ## Scenariusze ±20% i stabilne dachy
 
-Koszt +20% mnoży cenę jednostkową i stałą przez 1,2. Produkcja −20% mnoży PR przez 0,8. Każdy przypadek uruchamia nowy dobór przy tym samym budżecie; to scenariusze, nie przedział ufności. Stabilne dachy to wspólne ID wszystkich trzech przypadków.
+Koszt +20%: cena jednostkowa i stała × 1,2. Produkcja −20%: PR × 0,8. W każdym przypadku dobieramy dachy od nowa przy tym samym budżecie — to scenariusze testowe, nie przedział ufności. Stabilne dachy są wybrane we wszystkich trzech przypadkach.
 
 Wzór / reguła:
 
@@ -400,7 +400,7 @@ stable = |IDsbase ∩ IDscost ∩ IDsyield|
 
 ## Krzywa budżetu, udziały i zapisane warianty
 
-Punkty krzywej to ponowny dobór przy innym budżecie i tych samych parametrach. Nachylenie oznacza dodatkowe MWh/rok na dodatkowy milion zł. Udział największego dachu to jego E/E planu; ostrzeżenie ponad 30% to reguła interfejsu. Do czterech wariantów zapisujemy lokalnie jako historyczne wyniki, bez automatycznego przeliczenia.
+Każdy punkt krzywej to dobór przy innym budżecie i tych samych parametrach; nachylenie to MWh/rok z kolejnego miliona zł. Udział największego dachu to jego E / E planu, powyżej 30% — ostrzeżenie. Do czterech wariantów zapisujemy lokalnie, bez przeliczania.
 
 Wzór / reguła:
 
@@ -412,7 +412,7 @@ marginal = Δ(E/1000) / Δ(B/1e6); share = 100 × Eᵢ / ΣE
 
 ## Moduły i szkic przestrzenny
 
-Obrys budynku i otwory pochodzą z MSIP. Płaski dach, wysokość 6 m, moduł 2 × 1 m, początkowe odsunięcie 0,5 m i prześwit 0,8 m to jawne założenia. Moduły w całości mieszczą się w obrysie z odsunięciem; liczbę ogranicza pole modułów z „Planu”. Moc modułu = 2 m² × sprawność × 1 kW/m². To nie pomiar, dobór urządzeń ani ocena nośności. Kamera zmienia wyłącznie rysunek.
+Obrys i otwory pochodzą z MSIP. Założenia: płaski dach na 6 m, moduł 2 × 1 m, początkowe odsunięcie 0,5 m, prześwit rzędów 0,8 m (można zmienić lub dobrać). Moduły leżą w całości w obrysie, ich pole nie przekracza pola z „Planu”. Kamera zmienia tylko widok.
 
 Wzór / reguła:
 
@@ -424,7 +424,7 @@ N ≤ floor(Apanels / 2 m²); Psketch = N × 2 m² × η × 1 kW/m²
 
 ## Nachylenie, kierunek i porównanie
 
-Nachylenie liczymy od poziomu: 0° poziomo, 60° stromo. Azymut: 0° północ, 90° wschód, 180° południe, 270° zachód. Kierunek i nachylenie zmieniają promieniowanie, liczbę modułów i energię. Tabela porównuje tę samą moc 1 kWp bez dodatkowego cienia i śniegu. Najlepszy pokazany wariant może się różnić zimą i latem; to nie ciągła optymalizacja ani zalecenie bez oględzin.
+Nachylenie od poziomu (0° płasko), azymut: 0° północ, 90° wschód, 180° południe, 270° zachód. Tabela porównuje 1 kWp przy 0/15/30/45/60° i Pn/Wsch/Pd/Zach plus bieżący wariant, bez dodatkowego cienia i śniegu, z bieżącym prześwitem rzędów. Zimą i latem najlepszy wariant może być inny.
 
 Wzór / reguła:
 
@@ -436,19 +436,43 @@ Gpoa = DNI × max(0, cos(incidence)) + DHI × (1+cos β)/2 + GHI × 0.2 × (1−
 
 ## Pogoda Krakowa, pory roku i P10/P50/P90
 
-Lokalny zapis PVGIS 5.3 obejmuje 8 760 godzin roku typowego dla centrum Krakowa. SARAH3 dostarcza promieniowanie, ERA5 temperaturę i wiatr; okres danych to 2005–2023. Miesiące pochodzą z różnych lat historycznych. Dni miesiąca szeregujemy według sumy promieniowania poziomego znormalizowanej przybliżonym profilem bezchmurnym Haurwitza. P10/P50/P90 wybierają profile na 10/50/90 percentylu rankingu. Nie określają procentu zachmurzenia, opadów ani szans pogody jutro. Śnieg na modułach i dodatkowy cień wpisuje użytkownik; nie wynikają z zimowej daty.
+PVGIS 5.3: 8 760 godzin roku typowego dla centrum Krakowa (promieniowanie SARAH3, temperatura i wiatr ERA5, 2005–2023; miesiące z różnych lat). Dni miesiąca szeregujemy według promieniowania względem nieba bezchmurnego (Haurwitz); P10/P50/P90 to 10/50/90 percentyl. Śnieg i dodatkowy cień ustawiasz sam; śnieg tylko od listopada do marca.
 
 Wzór / reguła:
 
 ```text
-weather day = percentile(month days, ΣGHI / ΣGclear); Gused = Gpoa × (1−shade/100) × (1−snow/100)
+weather day = percentile(month days, ΣGHI / ΣGclear); Gused = (Gpoa − Gbeam × frow) × (1−shade/100) × (1−snow/100, XI–III only)
+```
+
+Źródło: [PVGIS 5.3 · TMY · Kraków](./data/krakow-climate.json).
+
+## Cień między rzędami
+
+Przedni rząd zacienia dolny pas następnego, gdy słońce jest nisko. Udział pasa liczymy co godzinę z nachylenia, rozstawu rzędów i wysokości słońca (Appelbaum & Bany, 1979); cień usuwa składową bezpośrednią na modułach, przed którymi stoi rząd. Wskaźnik to udział energii rocznej utracony przez rzędy. Pod suwakiem prześwitu podano prześwit dający straty ≤ 1%, ale wtedy może zmieścić się mniej modułów.
+
+Wzór / reguła:
+
+```text
+pitch = 2 m × cos β + gap; frow = clamp(1 − pitch × sin αp / (2 m × sin(αp + β)), 0, 1); tan αp = tan(elevation) / cos(γsun − γmodule); loss = 1 − E / Eno rows
+```
+
+Źródło: [PVGIS 5.3 · TMY · Kraków](./data/krakow-climate.json).
+
+## Najlepszy wariant dachu
+
+„Znajdź maksimum energii” sprawdza około 70 kombinacji nachylenia (0–60°), kierunku (południe ±45°) i prześwitu (0,3–6 m). W każdej moduły są rozmieszczane od nowa, więc liczą się i liczba mieszczących się modułów, i cień rzędów. Wybieramy wariant z największą energią w roku; szkic zmienia się po „Zastosuj”. Na sprawdzonych dachach wynik zgodził się z pełnym przeszukaniem do 0,1 MWh. Gwiazdka w tabeli orientacji to najlepszy wynik na 1 kWp, bez liczby modułów.
+
+Wzór / reguła:
+
+```text
+best = argmax E_year(tilt, azimuth, gap): grid tilt {0…60°} × gap {0.3…6 m} facing 180°, then 135°/225° and a local refinement; E_year uses the fitted module count and row shading
 ```
 
 Źródło: [PVGIS 5.3 · TMY · Kraków](./data/krakow-climate.json).
 
 ## Obliczenie mocy i temperatury
 
-Moc wynika z liczby modułów, nachylenia, kierunku, słońca, temperatury i wiatru. Temperaturę modułu szacuje Faiman przy U0=25 i U1=6,84; wiatr ERA5 jest na wysokości 10 m, nie przy modułach. Współczynnik −0,4%/°C i straty 14% to założenia, nie karta urządzenia. Wyjście ograniczamy mocą znamionową. Nie modelujemy osobno cieni między rzędami i falownika.
+Moc liczymy co godzinę z liczby modułów, kątów, słońca, temperatury i wiatru. Temperatura modułu według Faimana (U0=25, U1=6,84), wiatr ERA5 na wysokości 10 m. Współczynnik −0,4%/°C i straty 14% to typowe założenia. Wyjście nie przekracza mocy znamionowej; cień rzędów jest uproszczony, falownika nie modelujemy osobno.
 
 Wzór / reguła:
 
@@ -460,7 +484,7 @@ Tmodule = Tair + Gused/(25 + 6.84 × wind); P = min(Pnom, Pnom × Gused/1000 × 
 
 ## Energia godziny, dnia, miesiąca i roku
 
-Energia wybranego dnia sumuje 24 wartości godzinowe. Rok sumuje 8 760 godzin TMY, miesiące odpowiednie godziny. Wartość „do chwili” obejmuje początek dnia i część bieżącej godziny. W godzinie moc jest stała. Zmiana parametrów przelicza cały scenariusz; konfiguracji nie mieszamy w historii. P10/P50/P90 zmieniają przykład dnia, nie rok. Dane godzinowe nie uzasadniają dokładności sekundowej.
+Energia dnia to suma 24 godzin, miesiąca — jego godzin, roku — wszystkich 8 760 godzin TMY; w obrębie godziny moc jest stała. „Do chwili” to początek dnia plus część bieżącej godziny. P10/P50/P90 zmieniają przykład dnia, nie rok. Zmiana parametrów przelicza wszystko.
 
 Wzór / reguła:
 
@@ -472,7 +496,7 @@ E [kWh] ≈ Σ(P [W] × Δt [h])/1000; year = Σ8760 hours; month = Σmonth hour
 
 ## Czas i odtwarzanie doby
 
-Pokazujemy czas historycznego dnia w Europe/Warsaw z właściwym czasem letnim. Przykład ma 24 różne godziny; dni zmiany czasu nie są wybierane. Rok zachowuje wszystkie 8 760 godzin źródła. Przesunięcie promieniowania PVGIS 0,1811 godziny uwzględniamy w pozycji słońca. Odtwarzanie i suwak przesuwają wskaźnik; prędkość nie zmienia energii dobowej.
+Czas to Europe/Warsaw, z czasem letnim wybranego dnia. Przykład ma pełne 24 godziny, dni zmiany czasu nie są wybierane; rok zachowuje wszystkie 8 760 godzin. Pozycja słońca uwzględnia przesunięcie PVGIS 0,1811 godziny. Prędkość odtwarzania nie zmienia energii dobowej.
 
 Wzór / reguła:
 
@@ -484,7 +508,7 @@ Wzór / reguła:
 
 ## Źródła szkicu i różnica względem „Planu”
 
-Geometria to obrys MSIP, klimat to zapisany TMY PVGIS, parametry instalacji to scenariusz. Historyczne promieniowanie MONIT-AIR służy do doboru dachów; nie mnożymy go ponownie przez nowy kąt. Symulacja ma osobny model klimatyczny, więc wyniki mogą się różnić. JSON przechowuje źródło, lata, wymiary, współrzędne modułów, parametry i miesiące. Nie wymaga licznika, miejskiej instalacji, zakupu urządzeń ani zbierania pomiarów.
+Geometria to obrys MSIP, klimat — zapisany TMY PVGIS, parametry — Twój scenariusz. Promieniowanie MONIT-AIR służy tylko do doboru dachów, więc wynik może różnić się od „Planu”. JSON zapisuje źródło, lata, wymiary i współrzędne modułów, parametry i miesiące.
 
 Wzór / reguła:
 
