@@ -1,8 +1,7 @@
 export const SIMPLE_MESSAGES = [
-  ['simpleIntro', 'Выберите бюджет, посмотрите набор крыш и сравните размещение панелей на одном здании.', 'Ustaw budżet, sprawdź zestaw dachów i porównaj układ modułów na jednym budynku.'],
   ['simpleStep2', 'Посмотрите выбранные крыши', 'Sprawdź wybrane dachy'],
   ['simpleStep3', 'Сравните размещение панелей', 'Porównaj układ modułów'],
-  ['simpleSourceNote', 'Предварительный расчёт по открытым данным. Исходные числа можно проверить в MSIP; выработка и стоимость рассчитаны по параметрам сценария.', 'Obliczenia wstępne na otwartych danych. Liczby źródłowe można sprawdzić w MSIP; produkcja i koszt wynikają z założeń scenariusza.'],
+  ['simpleSourceNote', 'Предварительный расчёт по открытым данным MSIP.', 'Obliczenia wstępne na otwartych danych MSIP.'],
   ['simpleSources', 'Проверить источники', 'Sprawdź źródła'],
   ['simpleRecord', 'Исходная запись этой крыши · MSIP', 'Rekord źródłowy tego dachu · MSIP'],
   ['simpleLayer', 'Описание слоя MSIP', 'Opis warstwy MSIP'],
@@ -12,9 +11,9 @@ export const SIMPLE_MESSAGES = [
   ['simpleScenarios', 'Сохранить и сравнить свои планы', 'Zapisz i porównaj swoje plany'],
   ['simpleImpact', 'Дополнительные показатели', 'Dodatkowe wskaźniki'],
   ['simplePlanDetails', 'Ограничения мощности и процедуры', 'Limity mocy i procedury'],
-  ['simpleAssumptions', 'Параметры сценария: {coverage}% площади под панели; {cap}.', 'Założenia: {coverage}% powierzchni pod moduły; {cap}.'],
-  ['simpleAreaNotice', 'powuzytecz — модельная площадь MSIP, а не обследованное место под панели. В пилоте это около 79,9% площади контура здания; правило сокращения в описании слоя не раскрыто.', 'powuzytecz to powierzchnia modelowa MSIP, nie zinwentaryzowane miejsce pod moduły. W pilotażu wynosi ok. 79,9% pola obrysu budynku; opis warstwy nie wyjaśnia reguły redukcji.'],
-  ['simpleAreaMeaning', 'Сверка с контуром указывает на горизонтальную площадь здания, без суммирования этажей и фасадов. Площадь скатов и свободное место для монтажа требуют отдельной проверки.', 'Porównanie z obrysem wskazuje na poziome pole budynku, bez sumowania kondygnacji i elewacji. Pole połaci i wolne miejsce pod montaż wymagają osobnego sprawdzenia.'],
+  ['simpleAssumptions', '{coverage}% площади под панели · {cap}', '{coverage}% powierzchni pod moduły · {cap}'],
+  ['simpleAreaNotice', 'powuzytecz — модельная площадь MSIP (≈ 79,9% контура здания), а не обследованное место под панели.', 'powuzytecz — modelowa powierzchnia MSIP (≈ 79,9% obrysu budynku), nie zbadane miejsce pod moduły.'],
+  ['simpleAreaMeaning', 'Это горизонтальная площадь: без этажей и скатов.', 'To powierzchnia pozioma: bez kondygnacji i połaci.'],
   ['simpleAreaRatio', 'Поле powuzytecz составляет {ratio}% от powbudynku для этого объекта.', 'Pole powuzytecz stanowi {ratio}% pola powbudynku dla tego obiektu.'],
   ['simpleGeometryLink', 'Контур и сохранённые поля MSIP', 'Obrys i zapisane pola MSIP'],
   ['simpleClimateLink', 'Исходный климат · PVGIS TMY', 'Klimat źródłowy · PVGIS TMY'],
@@ -24,5 +23,4 @@ export const SIMPLE_MESSAGES = [
   ['simpleCameraDetails', 'Изменить ракурс камеры', 'Zmień widok kamery'],
   ['simpleOrientationDetails', 'Сравнить наклоны и направления', 'Porównaj nachylenia i kierunki'],
   ['simpleMethodDetails', 'Источники, допущения и различие моделей', 'Źródła, założenia i różnice modeli'],
-  ['simpleModelNotice', 'План выбирает здания по данным MONIT-AIR. Здесь — отдельный эскиз на климате PVGIS: оценки могут отличаться, результат плана автоматически не меняется.', 'Plan wybiera budynki na danych MONIT-AIR. Tutaj powstaje osobny szkic z klimatem PVGIS: wyniki mogą się różnić, a wynik planu nie zmienia się automatycznie.'],
 ];

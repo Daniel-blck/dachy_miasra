@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { DEFAULTS } from '../src/core/model.js';
-import { createRoofSimulation, configureSimulation, simulationSnapshot, advanceSimulation, resetSimulation, simulationArchive, simulationCsv, DAY_SECONDS } from '../src/core/simulation.js';
-import { prepareClimate, representativeDay, planeIrradiance, hourlyPv, solarPosition } from '../src/core/climate.js';
+import { createRoofSimulation, configureSimulation, simulationSnapshot, advanceSimulation, resetSimulation, simulationArchive, simulationCsv, playSimulation, suggestedRowGap, daylight, bestConfiguration, currentOptimum, DAY_SECONDS } from '../src/core/simulation.js';
+import { prepareClimate, representativeDay, planeIrradiance, hourlyPv, solarPosition, rowShadeFraction, PV_ASSUMPTIONS } from '../src/core/climate.js';
 import { projectRoof, rectangleFits } from '../src/core/layout.js';
 import { ozeTileUrl } from '../src/core/oze.js';
 
@@ -71,8 +71,67 @@ test('winter, summer and direction differ; monthly and annual energies conserve 
   configureSimulation(sim, { scenario: 'sunny' });
   near(sim.forecast.annualEnergyKwh, annual);
   assert.ok(sim.comparisons.find(r => r.tilt === 30 && r.azimuth === 180).annualEnergyKwh > sim.comparisons.find(r => r.tilt === 30 && r.azimuth === 0).annualEnergyKwh);
+  const months = sim.forecast.months.map(m => m.energyKwh);
   configureSimulation(sim, { snowPercent: 100 });
-  assert.equal(sim.dayEnergyKwh, 0); assert.equal(sim.forecast.annualEnergyKwh, 0);
+  // Snow on the modules is a winter assumption: January goes dark, July keeps its sun.
+  assert.equal(sim.dayEnergyKwh, 0);
+  for (const m of sim.forecast.months) {
+    if (PV_ASSUMPTIONS.snowMonths.includes(m.month)) assert.equal(m.energyKwh, 0);
+    else near(m.energyKwh, months[m.month - 1]);
+  }
+  configureSimulation(sim, { month: 7 });
+  assert.ok(sim.dayEnergyKwh > 0 && sim.profile.every(h => !h.snowApplied));
+});
+
+test('rows shade each other at low sun: tighter gaps lose more, flat modules lose nothing, the suggested gap keeps the loss small', () => {
+  const sim = make();
+  assert.ok(sim.layout.rowCount > 1 && sim.layout.rowExposure > 0.5 && sim.layout.rowExposure < 1);
+  const tight = sim.forecast.rowShadeLossPercent;
+  assert.ok(tight > 2, `30° rows 0.8 m apart should lose several percent, got ${tight}`);
+  configureSimulation(sim, { rowGapM: suggestedRowGap(sim) });
+  assert.ok(sim.forecast.rowShadeLossPercent <= PV_ASSUMPTIONS.rowShadeTargetPercent && sim.forecast.rowShadeLossPercent < tight);
+  configureSimulation(sim, { tilt: 0 });
+  assert.equal(sim.forecast.rowShadeLossPercent, 0);
+  // Sun straight ahead at 30°, modules at 30°, rows touching: the shadow covers half the module (Appelbaum & Bany).
+  const south30 = { east: 0, north: -Math.cos(Math.PI / 6), up: Math.sin(Math.PI / 6) };
+  near(rowShadeFraction(south30, 30, 180, 2, 2 * Math.cos(Math.PI / 6)), 0.5);
+  assert.equal(rowShadeFraction({ east: 0, north: 0.8, up: 0.6 }, 30, 180, 2, 2), 0);
+  // The orientation table keeps the roof's gap: with tight rows a low tilt beats 30°.
+  configureSimulation(sim, { tilt: 30, rowGapM: 0.8 });
+  const cell = (tilt, azimuth) => sim.comparisons.find(r => r.tilt === tilt && r.azimuth === azimuth).annualEnergyKwh;
+  assert.ok(cell(15, 180) > cell(30, 180) && cell(30, 180) > cell(60, 180));
+});
+
+test('the best-configuration search keeps every module on a tight roof, beats the default and leaves the sketch alone until applied', () => {
+  // On this roof a shadow-free gap would drop 56 of 136 modules; the maximum keeps them all with some row shade.
+  const tight = roofs.find(r => r.id === '126105_9.0017.228/23.1_BUD');
+  const sim = createRoofSimulation(tight, DEFAULTS, null, { climate, geometry: geometry.features.find(f => f.properties.ident === tight.id).geometry });
+  const before = sim.forecast.annualEnergyKwh, { tilt, azimuth, rowGapM } = sim;
+  const best = bestConfiguration(sim);
+  assert.deepEqual([sim.forecast.annualEnergyKwh, sim.tilt, sim.azimuth, sim.rowGapM], [before, tilt, azimuth, rowGapM]);
+  assert.ok(best.annualEnergyKwh > before);
+  assert.equal(best.fittedPanelCount, sim.requestedPanelCount);
+  configureSimulation(sim, { rowGapM: suggestedRowGap(sim) });
+  assert.ok(sim.layout.panels.length < sim.requestedPanelCount && sim.forecast.annualEnergyKwh < best.annualEnergyKwh);
+  sim.optimum = best;
+  configureSimulation(sim, { tilt: best.tilt, azimuth: best.azimuth, rowGapM: best.rowGapM });
+  near(sim.forecast.annualEnergyKwh, best.annualEnergyKwh, 1e-6);
+  assert.equal(currentOptimum(sim), best);
+  configureSimulation(sim, { shadePercent: 10 });
+  assert.equal(currentOptimum(sim), null);
+});
+
+test('slider previews defer the orientation table; playback survives setting changes and skips the night', () => {
+  const sim = make(), before = sim.comparisons;
+  configureSimulation(sim, { rowGapM: 2 }, { preview: true });
+  assert.equal(sim.comparisons, before); assert.equal(sim.comparisonsStale, true);
+  configureSimulation(sim, { rowGapM: 2 });
+  assert.notEqual(sim.comparisons, before); assert.equal(sim.comparisonsStale, false);
+  sim.running = true; configureSimulation(sim, { tilt: 15 });
+  assert.equal(sim.running, true);
+  sim.timeSeconds = DAY_SECONDS; sim.running = false; playSimulation(sim);
+  assert.equal(sim.running, true); assert.equal(sim.timeSeconds, daylight(sim).sunrise - 3600);
+  assert.ok(daylight(sim).sunrise > 3 * 3600 && daylight(sim).sunset < 22 * 3600);
 });
 
 test('camera and playback do not change physical results; configuration changes recalculate a single coherent day', () => {
@@ -108,6 +167,7 @@ test('simulation exports retain climate provenance, geometric assumptions, fitte
   assert.equal(archive.layout.assumptions.buildingHeightM, 6);
   assert.equal(archive.layout.panelsInLocalMetres.length, sim.layout.panels.length);
   assert.equal(archive.forecast.months.length, 12); assert.equal(archive.hourlyDayProfile.length, 24);
+  assert.ok(archive.rowShading.annualLossPercent > 0 && archive.rowShading.pitchM > archive.settings.rowGapM);
   archive.roof.location.lat = 0; assert.equal(sim.roof.location.lat, 50.05);
   for (const language of ['ru', 'pl']) {
     const csv = simulationCsv(sim, language);

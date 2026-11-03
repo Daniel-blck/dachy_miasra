@@ -4,12 +4,15 @@ const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
 const cache = new WeakMap();
 
 export const PV_ASSUMPTIONS = Object.freeze({
-  model: 'krakow-tmy-isotropic-v1', albedo: 0.2, lossFraction: 0.14,
+  model: 'krakow-tmy-isotropic-rows-v2', albedo: 0.2, lossFraction: 0.14,
   temperatureCoefficient: -0.004, faimanU0: 25, faimanU1: 6.84,
+  snowMonths: [11, 12, 1, 2, 3], rowShadeTargetPercent: 1,
   thermalSource: 'https://pvlib-python.readthedocs.io/en/stable/reference/generated/pvlib.temperature.faiman.html',
   solarSource: 'https://gml.noaa.gov/grad/solcalc/solareqns.PDF',
-  limitation: 'Isotropic diffuse transposition, generic c-Si temperature coefficient and free-standing thermal assumptions; no obstacle, row-shadow, inverter or snow-physics model.',
+  rowShadeSource: 'https://doi.org/10.1016/0038-092X(79)90042-6',
+  limitation: 'Isotropic diffuse transposition, generic c-Si temperature coefficient and free-standing thermal assumptions; row-to-row shading reduces only the direct beam in proportion to the shaded strip (no bypass-diode mismatch); no obstacle, inverter or snow-physics model.',
 });
+const SNOW_MONTHS = new Set(PV_ASSUMPTIONS.snowMonths);
 
 /** NOAA fractional-year approximation; azimuth is clockwise from north. UTC input prevents browser-timezone drift. */
 export function solarPosition(timestamp, latitude, longitude) {
@@ -73,47 +76,88 @@ export function representativeDay(climate, month, weather) {
   return days[Math.round((days.length - 1) * percentile)];
 }
 
-/** Isotropic-sky POA model; DNI is normal to the sun, DHI/GHI are horizontal. */
-export function planeIrradiance(hour, tilt, azimuth) {
-  if (hour.sun.up <= 0) return 0;
+/** Isotropic-sky POA components; DNI is normal to the sun, DHI/GHI are horizontal. */
+export function planeComponents(hour, tilt, azimuth) {
+  if (hour.sun.up <= 0) return { beam: 0, total: 0 };
+  // Horizontal GHI is retained exactly at tilt=0; reduces component inconsistencies at sunrise/sunset.
+  if (tilt === 0) return { beam: hour.dni * hour.sun.up, total: hour.ghi };
   const beta = tilt * RAD, az = azimuth * RAD;
   const incidence = hour.sun.east * Math.sin(beta) * Math.sin(az)
     + hour.sun.north * Math.sin(beta) * Math.cos(az) + hour.sun.up * Math.cos(beta);
-  // Horizontal GHI is retained exactly at tilt=0; reduces component inconsistencies at sunrise/sunset.
-  if (tilt === 0) return hour.ghi;
-  return Math.max(0, hour.dni * Math.max(0, incidence)
-    + hour.dhi * (1 + Math.cos(beta)) / 2 + hour.ghi * PV_ASSUMPTIONS.albedo * (1 - Math.cos(beta)) / 2);
+  const beam = hour.dni * Math.max(0, incidence);
+  return { beam, total: Math.max(0, beam + hour.dhi * (1 + Math.cos(beta)) / 2 + hour.ghi * PV_ASSUMPTIONS.albedo * (1 - Math.cos(beta)) / 2) };
 }
 
-export function hourlyPv(hour, settings, capacityKwp = 1) {
-  const reduction = (1 - settings.shadePercent / 100) * (1 - settings.snowPercent / 100);
-  const irradiance = planeIrradiance(hour, settings.tilt, settings.azimuth) * reduction;
+export function planeIrradiance(hour, tilt, azimuth) {
+  return planeComponents(hour, tilt, azimuth).total;
+}
+
+/** Shaded share of a module row behind an identical row (Appelbaum & Bany 1979, 2-D profile angle). */
+export function rowShadeFraction(sun, tilt, azimuth, slantM, pitchM) {
+  const forward = sun.east * Math.sin(azimuth * RAD) + sun.north * Math.cos(azimuth * RAD);
+  if (sun.up <= 0 || tilt <= 0 || forward <= 0) return 0;
+  const profile = Math.atan2(sun.up, forward), beta = tilt * RAD;
+  return clamp(1 - pitchM * Math.sin(profile) / (slantM * Math.sin(profile + beta)), 0, 1);
+}
+
+const isSnowMonth = hour => hour.localMonth == null || SNOW_MONTHS.has(hour.localMonth);
+const modulePower = (hour, irradiance, capacityKwp) => {
   const moduleTemperature = hour.temperature + irradiance / (PV_ASSUMPTIONS.faimanU0 + PV_ASSUMPTIONS.faimanU1 * hour.wind);
   const thermal = Math.max(0, 1 + PV_ASSUMPTIONS.temperatureCoefficient * (moduleTemperature - 25));
-  const powerW = Math.min(capacityKwp * 1000, Math.max(0, capacityKwp * irradiance * thermal * (1 - PV_ASSUMPTIONS.lossFraction)));
-  return { powerW, irradiance, moduleTemperature, temperature: hour.temperature, wind: hour.wind, sun: hour.sun };
+  return { moduleTemperature, powerW: Math.min(capacityKwp * 1000, Math.max(0, capacityKwp * irradiance * thermal * (1 - PV_ASSUMPTIONS.lossFraction))) };
+};
+
+/** settings.rows = { exposure, slantM, pitchM }: share of modules with a row in front, and the row geometry. */
+export function hourlyPv(hour, settings, capacityKwp = 1) {
+  const snow = isSnowMonth(hour) ? settings.snowPercent : 0;
+  const reduction = (1 - settings.shadePercent / 100) * (1 - snow / 100);
+  const plane = planeComponents(hour, settings.tilt, settings.azimuth), rows = settings.rows;
+  const rowShade = rows ? rowShadeFraction(hour.sun, settings.tilt, settings.azimuth, rows.slantM, rows.pitchM) * rows.exposure : 0;
+  const irradiance = (plane.total - plane.beam * rowShade) * reduction;
+  const { moduleTemperature, powerW } = modulePower(hour, irradiance, capacityKwp);
+  const unshadedW = rowShade ? modulePower(hour, plane.total * reduction, capacityKwp).powerW : powerW;
+  return { powerW, unshadedW, irradiance, rowShade, snowApplied: snow > 0, moduleTemperature, temperature: hour.temperature, wind: hour.wind, sun: hour.sun };
 }
 
 export function yearForecast(climate, settings, capacityKwp) {
-  const months = Array.from({ length: 12 }, (_, i) => ({ month: i + 1, energyKwh: 0, temperatureSum: 0, hours: 0 }));
+  const months = Array.from({ length: 12 }, (_, i) => ({ month: i + 1, energyKwh: 0, unshadedKwh: 0, temperatureSum: 0, hours: 0 }));
   for (const hour of climate.hours) {
-    const month = months[hour.month - 1];
-    month.energyKwh += hourlyPv(hour, settings, capacityKwp).powerW / 1000;
+    const month = months[hour.month - 1], pv = hourlyPv(hour, settings, capacityKwp);
+    month.energyKwh += pv.powerW / 1000; month.unshadedKwh += pv.unshadedW / 1000;
     month.temperatureSum += hour.temperature; month.hours++;
   }
-  return { annualEnergyKwh: months.reduce((sum, m) => sum + m.energyKwh, 0),
+  const annualEnergyKwh = months.reduce((sum, m) => sum + m.energyKwh, 0), unshaded = months.reduce((sum, m) => sum + m.unshadedKwh, 0);
+  return { annualEnergyKwh, rowShadeLossPercent: unshaded > 0 ? 100 * (1 - annualEnergyKwh / unshaded) : 0,
     months: months.map(m => ({ month: m.month, energyKwh: m.energyKwh, meanTemperature: m.temperatureSum / m.hours })) };
 }
 
-/** Same 1 kWp for every cell: isolates orientation, rather than confusing it with fitted panel count. */
-export function orientationComparison(climate) {
-  const key = PV_ASSUMPTIONS.model;
+/** Row geometry for a tilt: projected module depth plus the clear gap between rows. */
+export const rowGeometry = (tilt, slantM, gapM, exposure) => ({ exposure, slantM, pitchM: slantM * Math.cos(tilt * RAD) + gapM });
+
+/**
+ * Same 1 kWp for every cell: isolates orientation, rather than confusing it with fitted panel count.
+ * With `rows`, each cell keeps the current clear gap and share of shaded rows, so steep tilts pay for their longer shadows.
+ */
+export function orientationComparison(climate, rows = null, { tilts = [0, 15, 30, 45, 60], azimuths = [0, 90, 180, 270] } = {}) {
+  const key = `${rows ? `${PV_ASSUMPTIONS.model}|${rows.gapM}|${rows.exposure.toFixed(3)}` : PV_ASSUMPTIONS.model}|${tilts}|${azimuths}`;
   if (climate.orientationCache.has(key)) return climate.orientationCache.get(key);
-  const rows = [];
-  for (const tilt of [0, 15, 30, 45, 60]) for (const azimuth of [0, 90, 180, 270]) {
-    const forecast = yearForecast(climate, { tilt, azimuth, shadePercent: 0, snowPercent: 0 }, 1);
-    rows.push({ tilt, azimuth, ...forecast });
+  const result = [];
+  for (const tilt of tilts) for (const azimuth of azimuths) {
+    const forecast = yearForecast(climate, { tilt, azimuth, shadePercent: 0, snowPercent: 0,
+      rows: rows && rowGeometry(tilt, rows.slantM, rows.gapM, rows.exposure) }, 1);
+    result.push({ tilt, azimuth, ...forecast });
   }
-  climate.orientationCache.set(key, rows);
-  return rows;
+  if (climate.orientationCache.size > 64) climate.orientationCache.delete(climate.orientationCache.keys().next().value);
+  climate.orientationCache.set(key, result);
+  return result;
+}
+
+/** Smallest clear gap (0.1 m steps) whose annual row-to-row loss stays within the target, for a field of rows. */
+export function recommendedRowGap(climate, tilt, azimuth, slantM, { min = 0.3, max = 6, targetPercent = PV_ASSUMPTIONS.rowShadeTargetPercent } = {}) {
+  const loss = gap => yearForecast(climate, { tilt, azimuth, shadePercent: 0, snowPercent: 0, rows: rowGeometry(tilt, slantM, gap, 1) }, 1).rowShadeLossPercent;
+  if (loss(min) <= targetPercent) return min;
+  if (loss(max) > targetPercent) return max;
+  let low = Math.round(min * 10), high = Math.round(max * 10);
+  while (high - low > 1) { const mid = (low + high) >> 1; if (loss(mid / 10) <= targetPercent) high = mid; else low = mid; }
+  return high / 10;
 }

@@ -2,7 +2,7 @@ import { pointInRing } from './geo.js';
 
 export const LAYOUT_ASSUMPTIONS = Object.freeze({ panelLengthM: 2, panelWidthM: 1,
   moduleGapM: 0.05, setbackM: 0.5, buildingHeightM: 6,
-  description: 'Conceptual flat-roof layout in the MSIP footprint. Height and setbacks are assumptions, not a surveyed design or compliance check. No obstacles or row shading supplied.' });
+  description: 'Conceptual flat-roof layout in the MSIP footprint. Height and setbacks are assumptions, not a surveyed design or compliance check. No obstacles supplied; row-to-row shading is estimated from the row gap in the energy model.' });
 
 export function projectRoof(geometry) {
   const polygons = geometry?.type === 'Polygon' ? [geometry.coordinates] : geometry?.type === 'MultiPolygon' ? geometry.coordinates : [];
@@ -13,7 +13,7 @@ export function projectRoof(geometry) {
   const d = Math.sqrt(1 - e2 * Math.sin(lat) ** 2);
   const east = a / d * Math.cos(lat) * Math.PI / 180, north = a * (1 - e2) / d ** 3 * Math.PI / 180;
   const local = polygons.map(poly => poly.map(ring => ring.map(([lon, latitude]) => [(lon - origin[0]) * east, (latitude - origin[1]) * north])));
-  return { polygons: local, origin };
+  return { polygons: local, origin, edges: edgeIndex(local) };
 }
 
 const segmentDistance = (p, a, b) => {
@@ -26,11 +26,22 @@ function segmentsCross(a, b, c, d) {
   return cross(a, b, c) * cross(a, b, d) < 0 && cross(c, d, a) * cross(c, d, b) < 0;
 }
 
-export function rectangleFits(corners, polygons, setback) {
-  const poly = polygons.find(poly => corners.every(p => pointInRing(p, poly[0]) && !poly.slice(1).some(h => pointInRing(p, h))));
-  if (!poly) return false;
-  for (const ring of poly) for (let i = 1; i < ring.length; i++) {
-    const a = ring[i - 1], b = ring[i];
+/** Outline edges with bounding boxes, so a module is only tested against edges within its setback. */
+export function edgeIndex(polygons) {
+  return polygons.map(poly => poly.flatMap(ring => ring.slice(1).map((b, i) => {
+    const a = ring[i];
+    return { a, b, minX: Math.min(a[0], b[0]), maxX: Math.max(a[0], b[0]), minY: Math.min(a[1], b[1]), maxY: Math.max(a[1], b[1]) };
+  })));
+}
+
+export function rectangleFits(corners, polygons, setback, edges = edgeIndex(polygons)) {
+  const index = polygons.findIndex(poly => corners.every(p => pointInRing(p, poly[0]) && !poly.slice(1).some(h => pointInRing(p, h))));
+  if (index < 0) return false;
+  const xs = corners.map(p => p[0]), ys = corners.map(p => p[1]);
+  const minX = Math.min(...xs) - setback, maxX = Math.max(...xs) + setback, minY = Math.min(...ys) - setback, maxY = Math.max(...ys) + setback;
+  for (const edge of edges[index]) {
+    if (edge.maxX < minX || edge.minX > maxX || edge.maxY < minY || edge.minY > maxY) continue;
+    const { a, b } = edge;
     if (pointInRing(a, corners)) return false;
     for (let j = 0; j < corners.length; j++) {
       const p = corners[j], q = corners[(j + 1) % corners.length];
@@ -49,20 +60,24 @@ export function layoutPanels(roofPlane, settings, requestedCount) {
   const minU = Math.min(...points.map(p => p[0])), maxU = Math.max(...points.map(p => p[0]));
   const minV = Math.min(...points.map(p => p[1])), maxV = Math.max(...points.map(p => p[1]));
   const width = LAYOUT_ASSUMPTIONS.panelWidthM, length = LAYOUT_ASSUMPTIONS.panelLengthM * Math.cos(tilt);
-  const rise = LAYOUT_ASSUMPTIONS.panelLengthM * Math.sin(tilt), candidates = [];
+  const rise = LAYOUT_ASSUMPTIONS.panelLengthM * Math.sin(tilt), candidates = [], edges = roofPlane.edges || edgeIndex(polygons);
   let iterations = 0;
-  for (let b = minV + settings.setbackM; b + length <= maxV - settings.setbackM; b += length + settings.rowGapM) {
-    for (let a = minU + settings.setbackM; a + width <= maxU - settings.setbackM; a += width + LAYOUT_ASSUMPTIONS.moduleGapM) {
+  // Rows advance along v, the facing direction: row r+1 stands in front of row r and shades it at low sun.
+  for (let b = minV + settings.setbackM, row = 0; b + length <= maxV - settings.setbackM; b += length + settings.rowGapM, row++) {
+    for (let a = minU + settings.setbackM, column = 0; a + width <= maxU - settings.setbackM; a += width + LAYOUT_ASSUMPTIONS.moduleGapM, column++) {
       if (++iterations > 30000) throw new RangeError('Roof layout is too large.');
       const corners = [xy(a, b), xy(a + width, b), xy(a + width, b + length), xy(a, b + length)];
-      if (rectangleFits(corners, polygons, settings.setbackM)) {
+      if (rectangleFits(corners, polygons, settings.setbackM, edges)) {
         const center = xy(a + width / 2, b + length / 2);
-        candidates.push({ center, corners, vertices: corners.map(([x, y], i) => [x, y, i < 2 ? rise : 0]), distance: Math.hypot(...center) });
+        candidates.push({ center, corners, row, column, vertices: corners.map(([x, y], i) => [x, y, i < 2 ? rise : 0]), distance: Math.hypot(...center) });
       }
     }
   }
   const panels = candidates.toSorted((a, b) => a.distance - b.distance).slice(0, Math.max(0, requestedCount));
+  const occupied = new Set(panels.map(p => `${p.row}:${p.column}`));
+  const shadedByFront = tilt > 0 ? panels.filter(p => occupied.has(`${p.row + 1}:${p.column}`)).length : 0;
   return { ...roofPlane, panels, availableSlots: candidates.length, requestedCount,
+    rowCount: new Set(panels.map(p => p.row)).size, rowExposure: panels.length ? shadedByFront / panels.length : 0,
     panelAreaM2: panels.length * LAYOUT_ASSUMPTIONS.panelLengthM * LAYOUT_ASSUMPTIONS.panelWidthM,
     assumptions: { ...LAYOUT_ASSUMPTIONS, rowGapM: settings.rowGapM, setbackM: settings.setbackM } };
 }

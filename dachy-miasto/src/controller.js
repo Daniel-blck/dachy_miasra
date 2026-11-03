@@ -1,16 +1,18 @@
 import { DEFAULTS, prepareCandidates, validateParameters, describePortfolio } from './core/model.js';
 import { portfolioCsv } from './core/export.js';
 import { createReviewSample, reviewCsv } from './core/review.js';
-import { translate } from './i18n.js';
+import { translate, LOCALES } from './i18n.js';
 import { createViews } from './views.js';
 import { createRoofMap } from './map.js';
-import { createRoofSimulation, advanceSimulation, configureSimulation, resetSimulation, DAY_SECONDS, simulationArchive, simulationCsv } from './core/simulation.js';
+import { createRoofSimulation, advanceSimulation, configureSimulation, resetSimulation, playSimulation, simulationArchive, simulationCsv, searchBestConfiguration, currentOptimum } from './core/simulation.js';
 import { prepareClimate } from './core/climate.js';
 import { CALCULATION_METHOD, roofCalculationTrace } from './core/provenance.js';
 
 const app = document.getElementById('app');
 const SCENARIOS_KEY = 'dachy-miasto-scenarios', MAX_SCENARIOS = 4;
 const state = { parameters: { ...DEFAULTS }, excludedIds: [], language: 'pl', view: 'plan', mapMode: 'map', roofId: null, advanced: false, search: '', page: 0, busy: true, error: '', result: null, sensitivity: [], curve: [], saved: [], dataFilter: 'all', sort: { key: 'energy', dir: 'desc' }, showOutside: false, fontSize: 1, theme: 'basic', showOze: false };
+// Polish by default; a browser set to Russian starts in Russian until the reader picks a language.
+if ((navigator.languages || [navigator.language]).some(code => /^ru\b/i.test(code || ''))) state.language = 'ru';
 try {
   const stored = JSON.parse(localStorage.getItem('dachy-miasto-v1') || 'null');
   if (stored) {
@@ -61,24 +63,91 @@ function pauseRoofSimulation() {
 function refreshSimulationFrame() {
   const frame = document.getElementById('simulation-frame');
   if (!frame || !roofSimulation) return;
-  rememberDisclosures(frame);
   frame.innerHTML = views.simulationFrame();
-  restoreDisclosures(frame);
-  const start = app.querySelector('[data-action="simulation-start"]'), pause = app.querySelector('[data-action="simulation-pause"]');
-  if (start) start.disabled = roofSimulation.running || roofSimulation.timeSeconds >= DAY_SECONDS;
-  if (pause) pause.disabled = !roofSimulation.running;
-  const time = document.getElementById('sim-timeSeconds');
-  if (time && document.activeElement !== time) time.value = roofSimulation.timeSeconds;
+  const day = document.getElementById('simulation-day');
+  if (day) day.innerHTML = views.simulationDay();
+  const play = app.querySelector('[data-action="simulation-toggle"]');
+  if (play) { play.innerHTML = views.simulationPlayButton(); play.setAttribute('aria-pressed', roofSimulation.running); }
+  for (const key of ['timeSeconds', 'viewYaw', 'viewPitch']) {
+    const input = document.getElementById('sim-' + key);
+    if (input && document.activeElement !== input) { input.value = roofSimulation[key]; showRangeValue(input); }
+  }
+}
+
+/** Slider readout follows the thumb before the (throttled) recalculation lands. */
+function showRangeValue(input) {
+  const output = input.closest('.sim-field')?.querySelector('output');
+  if (!output) return;
+  const digits = Number(output.dataset.digits || 0);
+  output.textContent = Number(input.value).toLocaleString(LOCALES[state.language], { minimumFractionDigits: digits, maximumFractionDigits: digits }) + (output.dataset.unit || '');
+}
+
+/** Results, day caption and (unless a slider is still moving) the controls; keeps open sections and keyboard focus. */
+function refreshSimulation({ controls = true } = {}) {
+  if (!roofSimulation || state.view !== 'simulation' || !document.getElementById('sim-results')) return;
+  const focused = document.activeElement?.id;
+  const regions = [['sim-results', views.simulationResults], ['sim-day-caption', views.simulationDayCaption], ...(controls ? [['sim-controls', views.simulationControls]] : [])];
+  for (const [id, html] of regions) {
+    const el = document.getElementById(id);
+    rememberDisclosures(el); el.innerHTML = html(); restoreDisclosures(el);
+  }
+  refreshSimulationFrame();
+  if (focused && document.activeElement?.id !== focused) document.getElementById(focused)?.focus({ preventScroll: true });
+}
+
+function setSimulation(changes) {
+  if (!roofSimulation) return;
+  synchronizeSimulationClock();
+  configureSimulation(roofSimulation, changes);
+  refreshSimulation();
+}
+
+// While a slider moves: one cheap recalculation per animation frame, the orientation table waits for release.
+let pendingPreview = null;
+function previewSimulation(changes) {
+  const scheduled = Boolean(pendingPreview);
+  pendingPreview = { ...pendingPreview, ...changes };
+  if (scheduled) return;
+  requestAnimationFrame(() => {
+    const next = pendingPreview; pendingPreview = null;
+    if (!next || !roofSimulation) return;
+    synchronizeSimulationClock();
+    configureSimulation(roofSimulation, next, { preview: true });
+    if (Object.keys(next).every(key => ['viewYaw', 'viewPitch', 'timeSeconds'].includes(key))) refreshSimulationFrame();
+    else refreshSimulation({ controls: false });
+  });
+}
+const wrapYaw = yaw => ((Math.round(yaw) + 180) % 360 + 360) % 360 - 180;
+
+// The best-configuration search lays the roof out ~70 times; run it in short slices so the page stays responsive.
+function refreshOptimizer() {
+  const box = document.getElementById('sim-optimize-box');
+  if (box && roofSimulation) box.innerHTML = views.simulationOptimizer();
+}
+function optimizeSimulation() {
+  const sim = roofSimulation;
+  if (!sim || sim.search) return;
+  const search = searchBestConfiguration(sim);
+  sim.search = { progress: 0 }; sim.optimum = null; refreshOptimizer();
+  const slice = () => {
+    if (roofSimulation !== sim) return;
+    const until = performance.now() + 30;
+    let step;
+    do step = search.next(); while (!step.done && performance.now() < until);
+    if (step.done) { sim.search = null; sim.optimum = step.value; refreshOptimizer(); document.getElementById('sim-apply-optimum')?.focus({ preventScroll: true }); }
+    else { sim.search.progress = step.value; refreshOptimizer(); setTimeout(slice, 0); }
+  };
+  setTimeout(slice, 0);
 }
 
 function beginRoofSimulation(id = state.roofId) {
   const roof = roofById.get(id) || evaluated[0];
   if (!roof) return;
   const feature = geometry?.features.find(f => f.properties.ident === roof.id);
-  if (!climate || !feature) { state.view = 'simulation'; render(); return; }
+  if (!climate || !feature) { state.view = 'simulation'; render(); window.scrollTo(0, 0); return; }
   roofSimulation = createRoofSimulation(roof, state.parameters, roofMap.location(roof.id), { climate, geometry: feature.geometry });
   simulationTickAt = performance.now();
-  state.view = 'simulation'; render();
+  state.view = 'simulation'; render(); window.scrollTo(0, 0);
 }
 
 setInterval(() => {
@@ -102,15 +171,20 @@ function persist() {
 function render() {
   if (!views) return;
   if (state.view !== 'simulation' && roofSimulation?.running) pauseRoofSimulation();
+  const focused = document.activeElement?.id;
   rememberDisclosures(app);
   app.innerHTML = views.html();
   restoreDisclosures(app);
+  if (focused && document.activeElement?.id !== focused) document.getElementById(focused)?.focus({ preventScroll: true });
   document.documentElement.lang = state.language;
   document.documentElement.dataset.size = state.fontSize;
   document.documentElement.dataset.theme = state.theme;
   document.title = t('title');
   document.querySelector('meta[name="description"]').content = t('description');
   document.querySelector('.skip-link').textContent = t('skip');
+  // On a phone the tabs scroll sideways: keep the current one in view.
+  const tab = app.querySelector('.main-nav button.active'), strip = tab?.parentElement;
+  if (strip && strip.scrollWidth > strip.clientWidth) strip.scrollLeft += tab.getBoundingClientRect().left - strip.getBoundingClientRect().left - (strip.clientWidth - tab.offsetWidth) / 2;
   const host = app.querySelector('.map-host');
   if (host) {
     roofMap.mount(host, state.language);
@@ -193,11 +267,22 @@ app.addEventListener('click', event => {
     case 'explain-back': state.view = state.explanationBack || 'plan'; render(); window.scrollTo(0, 0); break;
     case 'simulate-roof': beginRoofSimulation(button.dataset.id); break;
     case 'simulation-create': beginRoofSimulation(); break;
-    case 'simulation-start': if (roofSimulation && roofSimulation.timeSeconds < DAY_SECONDS) { simulationTickAt = performance.now(); roofSimulation.running = true; refreshSimulationFrame(); } break;
-    case 'simulation-pause': pauseRoofSimulation(); refreshSimulationFrame(); break;
-    case 'simulation-reset': if (roofSimulation) { resetSimulation(roofSimulation); simulationTickAt = performance.now(); render(); } break;
-    case 'simulation-season': if (roofSimulation) { synchronizeSimulationClock(); configureSimulation(roofSimulation, { month: Number(button.dataset.month) }); render(); } break;
-    case 'simulation-variant': if (roofSimulation) { synchronizeSimulationClock(); configureSimulation(roofSimulation, { tilt: Number(button.dataset.tilt), azimuth: Number(button.dataset.azimuth) }); render(); } break;
+    case 'simulation-toggle': if (roofSimulation) {
+      synchronizeSimulationClock();
+      if (roofSimulation.running) roofSimulation.running = false;
+      else { playSimulation(roofSimulation); simulationTickAt = performance.now(); }
+      refreshSimulationFrame();
+    } break;
+    case 'simulation-reset': if (roofSimulation) { resetSimulation(roofSimulation); simulationTickAt = performance.now(); refreshSimulationFrame(); } break;
+    case 'simulation-season': setSimulation({ month: Number(button.dataset.month) }); break;
+    case 'simulation-direction': setSimulation({ azimuth: Number(button.dataset.azimuth) }); break;
+    case 'simulation-weather': setSimulation({ scenario: button.dataset.scenario }); break;
+    case 'simulation-period': setSimulation({ comparisonPeriod: button.dataset.period }); break;
+    case 'simulation-variant': setSimulation({ tilt: Number(button.dataset.tilt), azimuth: Number(button.dataset.azimuth) }); break;
+    case 'simulation-optimize': optimizeSimulation(); break;
+    case 'simulation-apply-optimum': { const best = roofSimulation && currentOptimum(roofSimulation); if (best) setSimulation({ tilt: best.tilt, azimuth: best.azimuth, rowGapM: best.rowGapM }); break; }
+    case 'simulation-rotate': if (roofSimulation) { configureSimulation(roofSimulation, { viewYaw: wrapYaw(roofSimulation.viewYaw + Number(button.dataset.step)) }); refreshSimulationFrame(); } break;
+    case 'simulation-view-reset': if (roofSimulation) { configureSimulation(roofSimulation, { viewYaw: 25, viewPitch: 35 }); refreshSimulationFrame(); } break;
     case 'simulation-choose': state.view = 'plan'; state.mapMode = 'map'; render(); roofMap.fitAll(); break;
     case 'simulation-map': if (roofSimulation) state.roofId = roofSimulation.roof.id; state.view = 'plan'; state.mapMode = 'map'; render(); roofMap.focusSimulation(); document.querySelector('.map-panel')?.scrollIntoView({ block: 'nearest' }); break;
     case 'simulation-json': if (roofSimulation) { synchronizeSimulationClock(); download('dachy-simulation.json', JSON.stringify(simulationArchive(roofSimulation), null, 2), 'application/json'); refreshSimulationFrame(); } break;
@@ -243,15 +328,36 @@ app.addEventListener('click', event => {
   }
 });
 
+let cameraDrag = null;
+app.addEventListener('pointerdown', event => {
+  const frame = event.target.closest('#simulation-frame');
+  if (!frame || !roofSimulation || event.button !== 0) return;
+  cameraDrag = { id: event.pointerId, x: event.clientX, y: event.clientY, yaw: roofSimulation.viewYaw, pitch: roofSimulation.viewPitch };
+  frame.setPointerCapture(event.pointerId); frame.classList.add('dragging');
+});
+app.addEventListener('pointermove', event => {
+  if (!cameraDrag || event.pointerId !== cameraDrag.id) return;
+  const pitch = Math.min(80, Math.max(15, Math.round(cameraDrag.pitch + (cameraDrag.y - event.clientY) * 0.3)));
+  previewSimulation({ viewYaw: wrapYaw(cameraDrag.yaw - (event.clientX - cameraDrag.x) * 0.5), viewPitch: pitch });
+});
+const endCameraDrag = event => {
+  if (!cameraDrag || event.pointerId !== cameraDrag.id) return;
+  cameraDrag = null; document.getElementById('simulation-frame')?.classList.remove('dragging');
+};
+app.addEventListener('pointerup', endCameraDrag);
+app.addEventListener('pointercancel', endCameraDrag);
+
+app.addEventListener('keydown', event => {
+  const el = event.target;
+  if (event.key === 'Enter' && el.matches('input[type="number"]')) { event.preventDefault(); el.dispatchEvent(new Event('change', { bubbles: true })); }
+});
+
 app.addEventListener('input', event => {
   const el = event.target;
-  if (roofSimulation && ['viewYaw', 'viewPitch', 'timeSeconds'].includes(el.dataset.simParam)) {
-    synchronizeSimulationClock();
-    if (el.dataset.simParam === 'timeSeconds') roofSimulation.running = false;
-    configureSimulation(roofSimulation, { [el.dataset.simParam]: Number(el.value) });
-    const output = el.closest('.field')?.querySelector('output');
-    if (output) output.textContent = `${el.value}°`;
-    refreshSimulationFrame();
+  if (roofSimulation && el.dataset.simParam && el.type === 'range') {
+    if (el.dataset.simParam === 'timeSeconds') { synchronizeSimulationClock(); roofSimulation.running = false; }
+    showRangeValue(el);
+    previewSimulation({ [el.dataset.simParam]: Number(el.value) });
     return;
   }
   if (el.id === 'budget-range') document.getElementById('budget').value = el.value;
@@ -268,11 +374,12 @@ app.addEventListener('change', async event => {
   const el = event.target;
   if (el.dataset.simParam && roofSimulation) {
     if (!el.checkValidity()) { el.reportValidity(); return; }
-    const value = ['scenario', 'comparisonPeriod'].includes(el.dataset.simParam) ? el.value : Number(el.value);
+    const value = Number(el.value);
+    pendingPreview = null;
     if (el.dataset.simParam === 'timeSeconds') roofSimulation.running = false;
     try { synchronizeSimulationClock(); configureSimulation(roofSimulation, { [el.dataset.simParam]: value }); }
     catch { el.setCustomValidity(t('invalidInput')); el.reportValidity(); return; }
-    render(); return;
+    refreshSimulation(); return;
   }
   if (el.id === 'oze-layer') { state.showOze = el.checked; render(); return; }
   if (el.id === 'language') { state.language = el.value; persist(); render(); return; }
@@ -303,7 +410,7 @@ try {
   if (context?.roofs) roofs = roofs.map(r => ({ ...r, ...(context.roofs[r.id] || {}) }));
   // Building class, parcel ownership, heritage and RES records come from scripts/fetch-registers.mjs.
   if (registers?.roofs) roofs = roofs.map(r => ({ ...r, ...(registers.roofs[r.id] || {}) }));
-  roofMap = createRoofMap({ geometry, roofs, onSelect: selectRoof, onSimulationSelect: () => { state.view = 'simulation'; render(); } });
+  roofMap = createRoofMap({ geometry, roofs, onSelect: selectRoof, onSimulationSelect: () => { state.view = 'simulation'; render(); window.scrollTo(0, 0); } });
   views = createViews({ state, roofs, metadata, verification, geometry, benchmark, context, registers, pvgis, audit,
     getCalculation: () => ({ evaluated, candidates, reasons, roofById }),
     getMapLocation: id => roofMap.location(id),
