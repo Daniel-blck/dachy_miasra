@@ -1,0 +1,346 @@
+{
+  "service": {
+    "currentVersion": 10.81,
+    "serviceDescription": "MONIT-AIR Atlas 2016: Mapa potencjału solarnego  dachów:- istniejące dachy zielone,- potencjalne dachy zielone, \n- potencjał solarny dachów.",
+    "mapName": "Layers",
+    "description": "",
+    "copyrightText": "",
+    "supportsDynamicLayers": true,
+    "layers": [
+      {
+        "id": 0,
+        "name": "Potencjał solarny dachów",
+        "parentLayerId": -1,
+        "defaultVisibility": true,
+        "subLayerIds": null,
+        "minScale": 10000,
+        "maxScale": 0,
+        "type": "Feature Layer",
+        "geometryType": "esriGeometryPolygon"
+      }
+    ],
+    "tables": [],
+    "spatialReference": {
+      "wkid": 2178,
+      "latestWkid": 2178
+    },
+    "singleFusedMapCache": false,
+    "initialExtent": {
+      "xmin": 7421038.857782125,
+      "ymin": 5549638.8544664895,
+      "xmax": 7421992.121688654,
+      "ymax": 5550462.662780774,
+      "spatialReference": {
+        "wkid": 2178,
+        "latestWkid": 2178
+      }
+    },
+    "fullExtent": {
+      "xmin": 7413783.66,
+      "ymin": 5537630.58,
+      "xmax": 7443360.05,
+      "ymax": 5554909.18,
+      "spatialReference": {
+        "wkid": 2178,
+        "latestWkid": 2178
+      }
+    },
+    "minScale": 10000,
+    "maxScale": 0,
+    "units": "esriMeters",
+    "supportedImageFormatTypes": "PNG32,PNG24,PNG,JPG,DIB,TIFF,EMF,PS,PDF,GIF,SVG,SVGZ,BMP",
+    "documentInfo": {
+      "Title": "",
+      "Author": "",
+      "Comments": "MONIT-AIR Atlas 2016: Mapa zieleni i warunków przewietrzania Krakowa:\n- granice Krakowa,\n- przewietrzanie Krakowa,\n- istniejące dachy zielone,\n- potencjał solarny dachów,\n- ortofoto 2014.",
+      "Subject": "MONIT-AIR Atlas 2016: Mapa zieleni i warunków przewietrzania Krakowa",
+      "Category": "",
+      "AntialiasingMode": "None",
+      "TextAntialiasingMode": "Force",
+      "Keywords": "MONIT-AIR_Atlas-Krakowa"
+    },
+    "capabilities": "Map,Query,Data",
+    "supportedQueryFormats": "JSON, geoJSON",
+    "exportTilesAllowed": false,
+    "referenceScale": 0,
+    "supportsDatumTransformation": true,
+    "maxRecordCount": 1000,
+    "maxImageHeight": 4096,
+    "maxImageWidth": 4096,
+    "supportedExtensions": "KmlServer",
+    "resampling": false,
+    "serviceItemId": "1f207b535e43445baa1059a937bd07a4"
+  },
+  "layer": {
+    "currentVersion": 10.81,
+    "id": 0,
+    "name": "Potencjał solarny dachów",
+    "type": "Feature Layer",
+    "description": "",
+    "geometryType": "esriGeometryPolygon",
+    "sourceSpatialReference": {
+      "wkid": 102176,
+      "latestWkid": 102176
+    },
+    "copyrightText": "",
+    "parentLayer": null,
+    "subLayers": [],
+    "minScale": 10000,
+    "maxScale": 0,
+    "drawingInfo": {
+      "renderer": {
+        "type": "classBreaks",
+        "field": "sredniepc",
+        "classificationMethod": "esriClassifyManual",
+        "minValue": 61,
+        "classBreakInfos": [
+          {
+            "symbol": {
+              "type": "esriSFS",
+              "style": "esriSFSSolid",
+              "color": [
+                230,
+                230,
+                80,
+                255
+              ],
+              "outline": {
+                "type": "esriSLS",
+                "style": "esriSLSSolid",
+                "color": [
+                  110,
+                  110,
+                  110,
+                  255
+                ],
+                "width": 0.4
+              }
+            },
+            "classMaxValue": 600,
+            "label": "< 600",
+            "description": ""
+          },
+          {
+            "symbol": {
+              "type": "esriSFS",
+              "style": "esriSFSSolid",
+              "color": [
+                255,
+                170,
+                0,
+                255
+              ],
+              "outline": {
+                "type": "esriSLS",
+                "style": "esriSLSSolid",
+                "color": [
+                  110,
+                  110,
+                  110,
+                  255
+                ],
+                "width": 0.4
+              }
+            },
+            "classMaxValue": 800,
+            "label": "600 - 800",
+            "description": ""
+          },
+          {
+            "symbol": {
+              "type": "esriSFS",
+              "style": "esriSFSSolid",
+              "color": [
+                255,
+                85,
+                0,
+                255
+              ],
+              "outline": {
+                "type": "esriSLS",
+                "style": "esriSLSSolid",
+                "color": [
+                  110,
+                  110,
+                  110,
+                  255
+                ],
+                "width": 0.4
+              }
+            },
+            "classMaxValue": 1000,
+            "label": "800 - 1000",
+            "description": ""
+          },
+          {
+            "symbol": {
+              "type": "esriSFS",
+              "style": "esriSFSSolid",
+              "color": [
+                230,
+                0,
+                0,
+                255
+              ],
+              "outline": {
+                "type": "esriSLS",
+                "style": "esriSLSSolid",
+                "color": [
+                  110,
+                  110,
+                  110,
+                  255
+                ],
+                "width": 0.4
+              }
+            },
+            "classMaxValue": 1086,
+            "label": "> 1000",
+            "description": ""
+          }
+        ]
+      },
+      "transparency": 40,
+      "labelingInfo": null
+    },
+    "defaultVisibility": true,
+    "extent": {
+      "xmin": 7413783.66,
+      "ymin": 5537630.58,
+      "xmax": 7443360.05,
+      "ymax": 5554909.18,
+      "spatialReference": {
+        "wkid": 2178,
+        "latestWkid": 2178
+      }
+    },
+    "hasAttachments": false,
+    "htmlPopupType": "esriServerHTMLPopupTypeAsHTMLText",
+    "displayField": "ident",
+    "typeIdField": null,
+    "subtypeFieldName": null,
+    "subtypeField": null,
+    "defaultSubtypeCode": null,
+    "fields": [
+      {
+        "name": "shape",
+        "type": "esriFieldTypeGeometry",
+        "alias": "Shape",
+        "domain": null
+      },
+      {
+        "name": "ident",
+        "type": "esriFieldTypeString",
+        "alias": "IDENT",
+        "length": 100,
+        "domain": null
+      },
+      {
+        "name": "solarid",
+        "type": "esriFieldTypeInteger",
+        "alias": "solarID",
+        "domain": null
+      },
+      {
+        "name": "sredniepc",
+        "type": "esriFieldTypeInteger",
+        "alias": "sredniePC",
+        "domain": null
+      },
+      {
+        "name": "sumapc",
+        "type": "esriFieldTypeInteger",
+        "alias": "sumaPC",
+        "domain": null
+      },
+      {
+        "name": "powbudynku",
+        "type": "esriFieldTypeDouble",
+        "alias": "powBudynku",
+        "domain": null
+      },
+      {
+        "name": "powuzytecz",
+        "type": "esriFieldTypeDouble",
+        "alias": "powUzytecz",
+        "domain": null
+      },
+      {
+        "name": "shape_leng",
+        "type": "esriFieldTypeDouble",
+        "alias": "Shape_Leng",
+        "domain": null
+      },
+      {
+        "name": "objectid",
+        "type": "esriFieldTypeOID",
+        "alias": "objectid",
+        "domain": null
+      },
+      {
+        "name": "st_area(shape)",
+        "type": "esriFieldTypeDouble",
+        "alias": "st_area(shape)",
+        "domain": null
+      },
+      {
+        "name": "st_length(shape)",
+        "type": "esriFieldTypeDouble",
+        "alias": "st_length(shape)",
+        "domain": null
+      }
+    ],
+    "geometryField": {
+      "name": "shape",
+      "type": "esriFieldTypeGeometry",
+      "alias": "Shape"
+    },
+    "indexes": [
+      {
+        "name": "r392_sde_rowid_uk",
+        "fields": "objectid",
+        "isAscending": true,
+        "isUnique": true,
+        "description": ""
+      },
+      {
+        "name": "a369_ix1",
+        "fields": "shape",
+        "isAscending": true,
+        "isUnique": true,
+        "description": ""
+      }
+    ],
+    "subtypes": [],
+    "relationships": [],
+    "canModifyLayer": true,
+    "canScaleSymbols": false,
+    "hasLabels": false,
+    "capabilities": "Map,Query,Data",
+    "maxRecordCount": 1000,
+    "supportsStatistics": true,
+    "supportsAdvancedQueries": true,
+    "supportedQueryFormats": "JSON, geoJSON",
+    "isDataVersioned": false,
+    "ownershipBasedAccessControlForFeatures": {
+      "allowOthersToQuery": true
+    },
+    "useStandardizedQueries": true,
+    "advancedQueryCapabilities": {
+      "useStandardizedQueries": true,
+      "supportsStatistics": true,
+      "supportsHavingClause": true,
+      "supportsCountDistinct": true,
+      "supportsOrderBy": true,
+      "supportsDistinct": true,
+      "supportsPagination": true,
+      "supportsTrueCurve": true,
+      "supportsReturningQueryExtent": true,
+      "supportsQueryWithDistance": true,
+      "supportsSqlExpression": true
+    },
+    "supportsDatumTransformation": true,
+    "supportsCoordinatesQuantization": true,
+    "serviceItemId": "1f207b535e43445baa1059a937bd07a4"
+  }
+}

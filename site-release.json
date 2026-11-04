@@ -1,0 +1,28 @@
+{
+  "title": "Dachy Miasta",
+  "version": "0.8.1",
+  "preparedAt": "2026-11-04T14:49:39.129Z",
+  "sourceFingerprint": "7ae371f15cec59015b1c7bdfeb28c099c4c2bbcd89ce1c0567606f9617090e50",
+  "downloads": [
+    {
+      "file": "01-Opis-projektu.pdf",
+      "bytes": 74179,
+      "sha256": "99a31e156c567f7a40bd14fa864bf3acb09f5bc7718ddf4ef385e6bf52eb6f96"
+    },
+    {
+      "file": "02-Instrukcja-uruchomienia.pdf",
+      "bytes": 99877,
+      "sha256": "b91d0ed30040e81dc50e661db2e46a8da2e66549366a4c00a4fd95a8ae08f6ef"
+    },
+    {
+      "file": "03-Dokumentacja-techniczna.pdf",
+      "bytes": 174008,
+      "sha256": "acafca2f7df9ccc84260ab908ca7cb89ea7b52afa4d566b18e9cb2e67e4d6a93"
+    },
+    {
+      "file": "Dachy-Miasta-Zgloszenie.zip",
+      "bytes": 982596,
+      "sha256": "900ef6450f8461872ba12de38b962b585263416224ea274ba904b26d05477966"
+    }
+  ]
+}

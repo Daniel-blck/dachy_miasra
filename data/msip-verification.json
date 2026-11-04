@@ -1,0 +1,21 @@
+{
+  "retrievedAt": "2026-10-25T21:00:58.510Z",
+  "serviceUrl": "https://msip.um.krakow.pl/arcgis/rest/services/MONIT-AIR/WS_MA_Potencal_solarny_dachow/MapServer",
+  "layerUrl": "https://msip.um.krakow.pl/arcgis/rest/services/MONIT-AIR/WS_MA_Potencal_solarny_dachow/MapServer/0",
+  "serviceDescription": "MONIT-AIR Atlas 2016: Mapa potencjału solarnego  dachów:- istniejące dachy zielone,- potencjalne dachy zielone, \n- potencjał solarny dachów.",
+  "sourceSpatialReference": {
+    "wkid": 2178,
+    "latestWkid": 2178
+  },
+  "outputSpatialReference": "EPSG:4326",
+  "officialRecordCount": 118594,
+  "queriedReferenceIds": 927,
+  "matchingReferenceIds": 927,
+  "features": 927,
+  "missingIds": [],
+  "duplicateGeometryIds": [],
+  "attributeDifferences": [],
+  "geojsonSha256": "65e323c0ce2726d8fe8d54ec90f73e82381764d92db3ddc306845bf5df71510e",
+  "geometryOnlyEnrichment": true,
+  "limitation": "Geometria i pola źródła porównane. Własność, stan techniczny, ochrona i aktualność instalacji pozostają niezweryfikowane."
+}

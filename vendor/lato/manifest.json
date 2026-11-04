@@ -1,0 +1,47 @@
+{
+  "name": "Lato",
+  "license": "OFL-1.1",
+  "source": "https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;0,900;1,400&display=swap",
+  "files": {
+    "lato-400i-latin-ext.woff2": {
+      "url": "https://fonts.gstatic.com/s/lato/v25/S6u8w4BMUTPHjxsAUi-qJCY.woff2",
+      "sha256Base64": "B3pp1baYRn9J3jSYCBXISP7LQONfSzlptCpwO4uRaVM=",
+      "bytes": 5776
+    },
+    "lato-400i-latin.woff2": {
+      "url": "https://fonts.gstatic.com/s/lato/v25/S6u8w4BMUTPHjxsAXC-q.woff2",
+      "sha256Base64": "vKHYitpUTZyAhy1NonEz+rbTRzYfom6TK0fslVkIj9A=",
+      "bytes": 24408
+    },
+    "lato-400-latin-ext.woff2": {
+      "url": "https://fonts.gstatic.com/s/lato/v25/S6uyw4BMUTPHjxAwXjeu.woff2",
+      "sha256Base64": "i5/Jc3BD+IwamnGVwnojm9MpzDPZKP+2dzbGGueh270=",
+      "bytes": 5612
+    },
+    "lato-400-latin.woff2": {
+      "url": "https://fonts.gstatic.com/s/lato/v25/S6uyw4BMUTPHjx4wXg.woff2",
+      "sha256Base64": "kYt9w+Li0BXBbOCLV7y2TSJTuvwXB2WPNh5yhlSY5Tc=",
+      "bytes": 23580
+    },
+    "lato-700-latin-ext.woff2": {
+      "url": "https://fonts.gstatic.com/s/lato/v25/S6u9w4BMUTPHh6UVSwaPGR_p.woff2",
+      "sha256Base64": "OleX9EC8Z7WYMMrYHlmnEBHjXLRe1/dHthppsKmw1q4=",
+      "bytes": 5552
+    },
+    "lato-700-latin.woff2": {
+      "url": "https://fonts.gstatic.com/s/lato/v25/S6u9w4BMUTPHh6UVSwiPGQ.woff2",
+      "sha256Base64": "xEfddne0Gdt7Idvfxid8eBapE//adv0uUnAt9TjeDkk=",
+      "bytes": 23040
+    },
+    "lato-900-latin-ext.woff2": {
+      "url": "https://fonts.gstatic.com/s/lato/v25/S6u9w4BMUTPHh50XSwaPGR_p.woff2",
+      "sha256Base64": "4mbWT64JWHSMKJsiiOKZkbS4OG60k1UXxFRKJHjPtwM=",
+      "bytes": 5640
+    },
+    "lato-900-latin.woff2": {
+      "url": "https://fonts.gstatic.com/s/lato/v25/S6u9w4BMUTPHh50XSwiPGQ.woff2",
+      "sha256Base64": "CGZIWbqrXtmPC/gY7XfjhGT/GCbcZAbV7L1lFAmvvZI=",
+      "bytes": 22504
+    }
+  }
+}

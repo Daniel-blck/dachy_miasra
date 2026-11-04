@@ -1,0 +1,119 @@
+{
+  "referenceRecords": 927,
+  "parameters": {
+    "budgetPln": 5000000,
+    "coverage": 0.6,
+    "efficiency": 0.2,
+    "performanceRatio": 0.8,
+    "costPerKwpPln": 4000,
+    "fixedCostPln": 15000,
+    "minCapacityKwp": 3,
+    "maxCapacityKwp": 150,
+    "minSpecificYield": 0,
+    "co2KgPerMwh": 553,
+    "onlyGreen": false,
+    "omitInvestmentLabels": false,
+    "onlyCityLand": true,
+    "requireCurrentBuilding": true,
+    "omitHeritage": false
+  },
+  "cases": [
+    {
+      "budgetPln": 0,
+      "selected": 0,
+      "spentPln": 0,
+      "annualEnergyKwh": 0,
+      "baselineEnergyKwh": 0,
+      "improvementPercent": null,
+      "boundGapPercent": 0,
+      "strategy": "largest",
+      "costStepPln": 0.01,
+      "elapsedMs": 1
+    },
+    {
+      "budgetPln": 100000,
+      "selected": 1,
+      "spentPln": 96120,
+      "annualEnergyKwh": 15988.128000000004,
+      "baselineEnergyKwh": 15988.128000000004,
+      "improvementPercent": 0,
+      "boundGapPercent": 3.818681481563536,
+      "strategy": "largest",
+      "costStepPln": 20,
+      "elapsedMs": 11
+    },
+    {
+      "budgetPln": 500000,
+      "selected": 2,
+      "spentPln": 493200,
+      "annualEnergyKwh": 95501.28000000001,
+      "baselineEnergyKwh": 87748.32,
+      "improvementPercent": 8.835451208638535,
+      "boundGapPercent": 3.879116661234298,
+      "strategy": "ratio",
+      "costStepPln": 100,
+      "elapsedMs": 8
+    },
+    {
+      "budgetPln": 1000000,
+      "selected": 3,
+      "spentPln": 998760,
+      "annualEnergyKwh": 193953.60000000003,
+      "baselineEnergyKwh": 191539.82189720595,
+      "improvementPercent": 1.2601964849322522,
+      "boundGapPercent": 3.118325108463636,
+      "strategy": "dp",
+      "costStepPln": 200,
+      "elapsedMs": 7
+    },
+    {
+      "budgetPln": 2000000,
+      "selected": 5,
+      "spentPln": 1999320,
+      "annualEnergyKwh": 391867.725897206,
+      "baselineEnergyKwh": 389282.93517395103,
+      "improvementPercent": 0.663987678293676,
+      "boundGapPercent": 0.9423292174752713,
+      "strategy": "ratio",
+      "costStepPln": 400,
+      "elapsedMs": 7
+    },
+    {
+      "budgetPln": 5000000,
+      "selected": 10,
+      "spentPln": 4993680,
+      "annualEnergyKwh": 968495.2830046662,
+      "baselineEnergyKwh": 939711.5423376651,
+      "improvementPercent": 3.0630400256016266,
+      "boundGapPercent": 0.35267886497608864,
+      "strategy": "dp",
+      "costStepPln": 1000,
+      "elapsedMs": 4
+    },
+    {
+      "budgetPln": 10000000,
+      "selected": 24,
+      "spentPln": 9981600,
+      "annualEnergyKwh": 1892412.3527329604,
+      "baselineEnergyKwh": 1815498.2633593543,
+      "improvementPercent": 4.236527840642834,
+      "boundGapPercent": 0.19307088882154033,
+      "strategy": "dp",
+      "costStepPln": 2000,
+      "elapsedMs": 4
+    },
+    {
+      "budgetPln": 20000000,
+      "selected": 56,
+      "spentPln": 19986240,
+      "annualEnergyKwh": 3673342.9867254766,
+      "baselineEnergyKwh": 3501015.4690004517,
+      "improvementPercent": 4.922215261568796,
+      "boundGapPercent": 0.08386995919277457,
+      "strategy": "ratio",
+      "costStepPln": 4000,
+      "elapsedMs": 4
+    }
+  ],
+  "scope": "Same unverified pilot candidates and explicit scenario assumptions; algorithmic comparison, not verified municipal savings."
+}

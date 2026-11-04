@@ -1,0 +1,333 @@
+import { DEFAULTS, prepareCandidates, validateParameters, describePortfolio } from './core/model.js';
+import { portfolioCsv } from './core/export.js';
+import { createReviewSample, reviewCsv } from './core/review.js';
+import { translate } from './i18n.js';
+import { createViews } from './views.js';
+import { createRoofMap } from './map.js';
+import { createRoofSimulation, advanceSimulation, configureSimulation, resetSimulation, DAY_SECONDS, simulationArchive, simulationCsv } from './core/simulation.js';
+import { prepareClimate } from './core/climate.js';
+import { CALCULATION_METHOD, roofCalculationTrace } from './core/provenance.js';
+import { readStorage, storedParameters, validSavedScenarios } from './core/storage.js';
+
+const app = document.getElementById('app');
+const SCENARIOS_KEY = 'dachy-miasto-scenarios', MAX_SCENARIOS = 4;
+const state = { parameters: { ...DEFAULTS }, excludedIds: [], language: 'pl', view: 'plan', mapMode: 'map', roofId: null, advanced: false, search: '', page: 0, busy: true, error: '', result: null, sensitivity: [], curve: [], saved: [], dataFilter: 'all', sort: { key: 'energy', dir: 'desc' }, fontSize: 1, theme: 'basic' };
+try {
+  const stored = readStorage(localStorage, 'dachy-miasto-v1');
+  if (stored) {
+    state.parameters = storedParameters(stored.parameters, DEFAULTS);
+    state.excludedIds = Array.isArray(stored.excludedIds) ? stored.excludedIds.filter(x => typeof x === 'string') : [];
+  }
+  localStorage.removeItem('dachy-miasto-language');
+  const display = readStorage(localStorage, 'dachy-miasto-display');
+  if ([1, 2, 3].includes(display?.fontSize)) state.fontSize = display.fontSize;
+  if (['basic', 'contrast'].includes(display?.theme)) state.theme = display.theme;
+  state.saved = validSavedScenarios(readStorage(localStorage, SCENARIOS_KEY), MAX_SCENARIOS)
+    .map((scenario, index) => ({ ...scenario, label: `Wariant ${index + 1}` }));
+} catch { /* Browser storage is optional. */ }
+
+const t = (key, parameters) => translate(state.language, key, parameters);
+let roofs = [], metadata, verification, geometry, benchmark, context, registers, pvgis, audit, climate, views, roofMap;
+let evaluated = [], candidates = [], reasons = {}, roofById = new Map(), job = 0;
+let worker;
+const optionalJson = async url => { try { const response = await fetch(url); return response.ok ? await response.json() : null; } catch { return null; } };
+
+let roofSimulation = null, simulationTickAt = 0;
+
+// Keep the reader's expanded sections when a calculation replaces the markup.
+const disclosureState = new Map();
+function rememberDisclosures(root) {
+  for (const section of root.querySelectorAll('details[data-disclosure]')) disclosureState.set(section.dataset.disclosure, section.open);
+}
+function restoreDisclosures(root) {
+  for (const section of root.querySelectorAll('details[data-disclosure]')) {
+    if (disclosureState.has(section.dataset.disclosure)) section.open = disclosureState.get(section.dataset.disclosure);
+  }
+}
+
+function synchronizeSimulationClock() {
+  const now = performance.now();
+  if (roofSimulation?.running) advanceSimulation(roofSimulation, Math.max(0, now - simulationTickAt) / 1000 * roofSimulation.speed);
+  simulationTickAt = now;
+}
+
+function pauseRoofSimulation() {
+  synchronizeSimulationClock();
+  if (roofSimulation) roofSimulation.running = false;
+}
+
+function refreshSimulationFrame() {
+  const frame = document.getElementById('simulation-frame');
+  if (!frame || !roofSimulation) return;
+  rememberDisclosures(frame);
+  frame.innerHTML = views.simulationFrame();
+  restoreDisclosures(frame);
+  const start = app.querySelector('[data-action="simulation-start"]'), pause = app.querySelector('[data-action="simulation-pause"]');
+  if (start) start.disabled = roofSimulation.running || roofSimulation.timeSeconds >= DAY_SECONDS;
+  if (pause) pause.disabled = !roofSimulation.running;
+  const time = document.getElementById('sim-timeSeconds');
+  if (time && document.activeElement !== time) time.value = roofSimulation.timeSeconds;
+}
+
+function beginRoofSimulation(id = state.roofId) {
+  const roof = roofById.get(id) || evaluated[0];
+  if (!roof) return;
+  const feature = geometry?.features.find(f => f.properties.ident === roof.id);
+  state.simulationError = '';
+  if (!climate || !feature) { state.view = 'simulation'; render(); return; }
+  try {
+    const nextSimulation = createRoofSimulation(roof, state.parameters, roofMap.location(roof.id), { climate, geometry: feature.geometry });
+    roofSimulation = nextSimulation;
+  } catch {
+    state.simulationError = 'simCreationError';
+    state.view = 'simulation'; render(); return;
+  }
+  simulationTickAt = performance.now();
+  state.view = 'simulation'; render();
+}
+
+setInterval(() => {
+  if (!roofSimulation?.running) return;
+  if (document.hidden || state.view !== 'simulation') pauseRoofSimulation();
+  else synchronizeSimulationClock();
+  refreshSimulationFrame();
+}, 250);
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && roofSimulation?.running) { pauseRoofSimulation(); refreshSimulationFrame(); }
+});
+function persist() {
+  try {
+    localStorage.setItem('dachy-miasto-v1', JSON.stringify({ parameters: state.parameters, excludedIds: state.excludedIds }));
+    localStorage.setItem(SCENARIOS_KEY, JSON.stringify(state.saved));
+    localStorage.setItem('dachy-miasto-display', JSON.stringify({ fontSize: state.fontSize, theme: state.theme }));
+  } catch { /* Calculation works even when storage is disabled. */ }
+}
+
+function render() {
+  if (!views) return;
+  const focused = document.activeElement;
+  const focusSelector = focused?.id ? `#${CSS.escape(focused.id)}`
+    : focused?.dataset.param ? `[data-param="${CSS.escape(focused.dataset.param)}"]` : null;
+  if (state.view !== 'simulation' && roofSimulation?.running) pauseRoofSimulation();
+  rememberDisclosures(app);
+  app.innerHTML = views.html();
+  restoreDisclosures(app);
+  document.documentElement.lang = state.language;
+  document.documentElement.dataset.size = state.fontSize;
+  document.documentElement.dataset.theme = state.theme;
+  document.title = t('title');
+  document.querySelector('meta[name="description"]').content = t('description');
+  document.querySelector('.skip-link').textContent = t('skip');
+  const host = app.querySelector('.map-host');
+  if (host) {
+    roofMap.mount(host);
+    roofMap.update({ selectedIds: state.result?.selectedIds || [], eligibleIds: candidates.map(r => r.id), roofId: state.roofId, simulation: roofSimulation });
+  }
+  document.getElementById('advanced')?.addEventListener('toggle', event => { state.advanced = event.target.open; });
+  if (focusSelector && app.contains(focused) === false) app.querySelector(focusSelector)?.focus({ preventScroll: true });
+}
+
+function recalculate() {
+  const currentJob = ++job;
+  try {
+    validateParameters(state.parameters);
+    ({ evaluated, candidates, reasons } = prepareCandidates(roofs, state.parameters, state.excludedIds));
+    roofById = new Map(evaluated.map(r => [r.id, r]));
+    state.busy = true; state.error = ''; state.result = null; state.sensitivity = []; state.curve = [];
+    persist(); render();
+    worker.postMessage({ id: currentJob, roofs, parameters: state.parameters, excludedIds: state.excludedIds });
+  } catch (error) { state.error = error.message; state.busy = false; state.result = null; render(); }
+}
+
+function receiveCalculation({ data }) {
+  if (data.id !== job) return;
+  state.busy = false;
+  if (data.error) state.error = data.error;
+  else {
+    state.result = data.result; state.sensitivity = data.sensitivity; state.curve = data.curve || [];
+    if (!state.roofId) state.roofId = data.result.selectedIds[0] || candidates[0]?.id || roofs[0]?.id;
+  }
+  render();
+}
+
+function selectRoof(id, source = 'list') {
+  state.roofId = id; state.view = 'plan';
+  if (source !== 'map') state.mapMode = 'map';
+  render();
+  if (source !== 'map') roofMap.focus(id);
+}
+
+function planFacts() {
+  if (!state.result) return null;
+  return describePortfolio(state.result.selectedIds.map(id => roofById.get(id)).filter(Boolean), state.parameters);
+}
+
+function saveScenario() {
+  const facts = planFacts();
+  if (state.busy || !facts || state.saved.length >= MAX_SCENARIOS) return;
+  const used = new Set(state.saved.map(s => s.label));
+  let n = 1; while (used.has(`${t('variant')} ${n}`)) n++;
+  const p = state.parameters;
+  state.saved = [...state.saved, { label: `${t('variant')} ${n}`, budgetPln: p.budgetPln, maxCapacityKwp: p.maxCapacityKwp, count: facts.count, energyMwh: facts.annualEnergyKwh / 1000, co2Tonnes: facts.co2Tonnes, costPerMwhPln: facts.costPerMwhPln, procedures: facts.procedures, parameters: { ...p }, excludedIds: [...state.excludedIds] }];
+  persist(); render();
+}
+
+function download(filename, content, type) {
+  const url = URL.createObjectURL(new Blob([content], { type }));
+  const link = document.createElement('a'); link.href = url; link.download = filename; link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+app.addEventListener('click', event => {
+  if (event.target.closest('#city-map')) return; // Leaflet owns its pointer, keyboard and wheel events.
+  const explanation = event.target.closest('[data-explain]');
+  if (explanation) {
+    event.preventDefault();
+    if (state.view !== 'guide') state.explanationBack = state.view;
+    state.view = 'guide'; state.explanation = explanation.dataset.explain; render();
+    const target = document.getElementById('explain-' + state.explanation);
+    target?.focus({ preventScroll: true }); target?.scrollIntoView({ block: 'start' });
+    return;
+  }
+  const view = event.target.closest('[data-view]');
+  if (view) { event.preventDefault(); const changed = state.view !== view.dataset.view; state.view = view.dataset.view; render(); if (changed) { document.getElementById('main')?.focus({ preventScroll: true }); window.scrollTo(0, 0); } return; }
+  const roof = event.target.closest('[data-roof-id]');
+  if (roof) { selectRoof(roof.dataset.roofId); return; }
+  const button = event.target.closest('[data-action]');
+  if (!button || button.disabled) return;
+  switch (button.dataset.action) {
+    case 'show-analysis': {
+      const section = document.querySelector('[data-disclosure="plan-analysis"]');
+      if (section) { section.open = true; section.querySelector('summary').focus(); section.scrollIntoView({ block: 'start', behavior: 'smooth' }); }
+      break;
+    }
+    case 'explain-back': state.view = state.explanationBack || 'plan'; render(); window.scrollTo(0, 0); break;
+    case 'simulate-roof': beginRoofSimulation(button.dataset.id); break;
+    case 'simulation-create': beginRoofSimulation(); break;
+    case 'simulation-start': if (roofSimulation && roofSimulation.timeSeconds < DAY_SECONDS) { simulationTickAt = performance.now(); roofSimulation.running = true; refreshSimulationFrame(); } break;
+    case 'simulation-pause': pauseRoofSimulation(); refreshSimulationFrame(); break;
+    case 'simulation-reset': if (roofSimulation) { resetSimulation(roofSimulation); simulationTickAt = performance.now(); render(); } break;
+    case 'simulation-season': if (roofSimulation) { synchronizeSimulationClock(); configureSimulation(roofSimulation, { month: Number(button.dataset.month) }); render(); } break;
+    case 'simulation-variant': if (roofSimulation) { synchronizeSimulationClock(); configureSimulation(roofSimulation, { tilt: Number(button.dataset.tilt), azimuth: Number(button.dataset.azimuth) }); render(); } break;
+    case 'simulation-choose': state.view = 'plan'; state.mapMode = 'map'; render(); roofMap.fitAll(); break;
+    case 'simulation-map': if (roofSimulation) state.roofId = roofSimulation.roof.id; state.view = 'plan'; state.mapMode = 'map'; render(); roofMap.focusSimulation(); document.querySelector('.map-panel')?.scrollIntoView({ block: 'nearest' }); break;
+    case 'simulation-json': if (roofSimulation) { synchronizeSimulationClock(); download('dachy-simulation.json', JSON.stringify(simulationArchive(roofSimulation), null, 2), 'application/json'); refreshSimulationFrame(); } break;
+    case 'simulation-csv': if (roofSimulation) { synchronizeSimulationClock(); download(`dachy-simulation-${state.language}.csv`, simulationCsv(roofSimulation, state.language), 'text/csv;charset=utf-8'); refreshSimulationFrame(); } break;
+    case 'export-review': {
+      const sample = createReviewSample(roofs, state.result?.selectedIds || [], geometry);
+      download(`dachy-review-${state.language}.csv`, reviewCsv(sample, state.language), 'text/csv;charset=utf-8');
+      break;
+    }
+    case 'exclude': {
+      const id = button.dataset.id;
+      state.excludedIds = state.excludedIds.includes(id) ? state.excludedIds.filter(x => x !== id) : [...state.excludedIds, id];
+      recalculate(); break;
+    }
+    case 'reset': state.parameters = { ...DEFAULTS }; state.excludedIds = []; state.roofId = null; recalculate(); break;
+    case 'save-scenario': saveScenario(); break;
+    case 'font-size': state.fontSize = Number(button.dataset.size); persist(); render(); roofMap?.resize(); break;
+    case 'theme': state.theme = button.dataset.theme; persist(); render(); break;
+    case 'remove-scenario': state.saved = state.saved.filter((_, i) => i !== Number(button.dataset.index)); persist(); render(); break;
+    case 'sort': {
+      const key = button.dataset.key;
+      state.sort = state.sort.key === key ? { key, dir: state.sort.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: ['name', 'district', 'procedure'].includes(key) ? 'asc' : 'desc' };
+      state.page = 0; render(); document.querySelector(`[data-action="sort"][data-key="${key}"]`)?.focus(); break;
+    }
+    case 'map': case 'list': state.mapMode = button.dataset.action; render(); break;
+    case 'map-all': roofMap.fitAll(); break;
+    case 'map-selected': roofMap.fitSelected(state.result?.selectedIds || []); break;
+    case 'focus-roof': state.mapMode = 'map'; render(); roofMap.focus(button.dataset.id); document.querySelector('.map-panel')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); break;
+    case 'show-details': document.getElementById('roof-details')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); break;
+    case 'prev-page': state.page = Math.max(0, state.page - 1); render(); break;
+    case 'next-page': state.page++; render(); break;
+    case 'export-csv':
+      if (state.view === 'simulation') {
+        if (roofSimulation) { synchronizeSimulationClock(); download(`dachy-simulation-${state.language}.csv`, simulationCsv(roofSimulation, state.language), 'text/csv;charset=utf-8'); refreshSimulationFrame(); }
+      } else if (!state.busy && state.result) download('dachy-miasta-portfel.csv', portfolioCsv(evaluated, state.result, { ...state.parameters, excludedIds: state.excludedIds }, metadata, state.language), 'text/csv;charset=utf-8');
+      break;
+    case 'export-json': if (!state.busy && state.result) download('dachy-miasta-scenariusz.json', JSON.stringify({ version: 3, calculationMethod: CALCULATION_METHOD, sourceAudit: audit ? { inputSha256: audit.inputSha256, sourceRetrievedAt: audit.sourceRetrievedAt, sourceSurveyDate: audit.sourceSurveyDate, solar: { records: audit.solar.records, roundedAreaMatches: audit.solar.roundedAreaMatches, maxAreaRoundingDeltaM2: audit.solar.maxAreaRoundingDeltaM2 } } : null, selectedRoofCalculations: state.result.selectedIds.map(id => roofCalculationTrace(roofById.get(id), state.parameters, geometry?.features.find(f => f.properties.ident === id))), language: state.language, parameters: state.parameters, excludedIds: state.excludedIds, result: state.result, plan: planFacts(), sensitivity: state.sensitivity, budgetCurve: state.curve, savedScenarios: state.saved, metadata, verification, context: context ? { retrievedAt: context.retrievedAt, sources: context.sources, method: context.method, stats: context.stats } : null, registers: registers ? { retrievedAt: registers.retrievedAt, sources: registers.sources, currency: registers.currency, method: registers.method, stats: registers.stats } : null, pvgis }, null, 2), 'application/json'); break;
+    case 'print': if (!state.busy && (state.view === 'simulation' ? roofSimulation : state.result)) {
+      if (state.view === 'simulation') { pauseRoofSimulation(); refreshSimulationFrame(); }
+      else { state.view = 'plan'; state.mapMode = 'map'; render(); roofMap.fitSelected(state.result?.selectedIds || []); }
+      requestAnimationFrame(() => window.print());
+    } break;
+  }
+});
+
+app.addEventListener('input', event => {
+  const el = event.target;
+  el.setCustomValidity?.('');
+  if (roofSimulation && ['viewYaw', 'viewPitch', 'timeSeconds'].includes(el.dataset.simParam)) {
+    synchronizeSimulationClock();
+    if (el.dataset.simParam === 'timeSeconds') roofSimulation.running = false;
+    configureSimulation(roofSimulation, { [el.dataset.simParam]: Number(el.value) });
+    const output = el.closest('.field')?.querySelector('output');
+    if (output) output.textContent = `${el.value}°`;
+    refreshSimulationFrame();
+    return;
+  }
+  if (el.id === 'budget-range') document.getElementById('budget').value = el.value;
+  if (el.id === 'coverage') document.getElementById('coverage-value').textContent = el.value + '%';
+  if (el.id === 'roof-search') {
+    const position = el.selectionStart;
+    state.search = el.value; state.page = 0; render();
+    const next = document.getElementById('roof-search'); next.focus(); next.setSelectionRange(position, position);
+  }
+});
+
+app.addEventListener('change', async event => {
+  const el = event.target;
+  if (el.dataset.simParam && roofSimulation) {
+    if (!el.checkValidity()) { el.reportValidity(); return; }
+    const value = ['scenario', 'comparisonPeriod'].includes(el.dataset.simParam) ? el.value : Number(el.value);
+    if (el.dataset.simParam === 'timeSeconds') roofSimulation.running = false;
+    try { synchronizeSimulationClock(); configureSimulation(roofSimulation, { [el.dataset.simParam]: value }); }
+    catch { el.setCustomValidity(t('invalidInput')); el.reportValidity(); return; }
+    render(); return;
+  }
+  if (el.id === 'roof-search') return;
+  if (el.id === 'data-filter') { state.dataFilter = el.value; state.page = 0; render(); document.getElementById('data-filter')?.focus(); return; }
+  const next = { ...state.parameters };
+  if (el.id === 'budget' || el.id === 'budget-range') next.budgetPln = Number(el.value) * 1e6;
+  else if (el.dataset.param) {
+    let value = el.type === 'checkbox' ? el.checked : Number(el.value);
+    if (['coverage', 'efficiency', 'performanceRatio'].includes(el.dataset.param)) value /= 100;
+    next[el.dataset.param] = value;
+  } else return;
+  if (!el.checkValidity()) { el.setCustomValidity(t('invalidInput')); el.reportValidity(); return; }
+  try { validateParameters(next); } catch { el.setCustomValidity(t('invalidInput')); el.reportValidity(); return; }
+  state.parameters = next; recalculate();
+});
+
+try {
+  worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
+  worker.onmessage = receiveCalculation;
+  worker.onerror = () => { state.busy = false; state.error = 'Worker failed'; state.result = null; render(); };
+  const responses = await Promise.all([fetch('./data/roofs.json'), fetch('./data/reference-metadata.json')]);
+  if (responses.some(r => !r.ok)) throw new Error('Dataset unavailable');
+  [roofs, metadata] = await Promise.all(responses.map(r => r.json()));
+  [geometry, verification, benchmark, context, registers, pvgis, audit, climate] = await Promise.all([optionalJson('./data/msip-roofs.geojson'), optionalJson('./data/msip-verification.json'), optionalJson('./data/benchmark.json'), optionalJson('./data/roof-context.json'), optionalJson('./data/roof-registers.json'), optionalJson('./data/pvgis-reference.json'), optionalJson('./data/source-audit.json'), optionalJson('./data/krakow-climate.json')]);
+  try { if (climate) prepareClimate(climate); } catch { climate = null; }
+  const solarById = new Map((geometry?.features || []).map(f => [f.properties.ident, f.properties]));
+  roofs = roofs.map(r => ({ ...r, solarSource: solarById.get(r.id) || null }));
+  // Address, district and cultural park are joined from municipal open data by scripts/fetch-context.mjs.
+  if (context?.roofs) roofs = roofs.map(r => ({ ...r, ...(context.roofs[r.id] || {}) }));
+  // Building class, parcel ownership, heritage and RES records come from scripts/fetch-registers.mjs.
+  if (registers?.roofs) roofs = roofs.map(r => ({ ...r, ...(registers.roofs[r.id] || {}) }));
+  roofMap = createRoofMap({ geometry, roofs, onSelect: selectRoof, onSimulationSelect: () => { state.view = 'simulation'; render(); } });
+  views = createViews({ state, roofs, metadata, verification, geometry, benchmark, context, registers, pvgis, audit,
+    getCalculation: () => ({ evaluated, candidates, reasons, roofById }),
+    getMapLocation: id => roofMap.location(id),
+    getSimulationData: () => ({ climate, geometry: geometry?.features.find(f => f.properties.ident === (state.roofId || evaluated[0]?.id))?.geometry }),
+    getSimulation: () => roofSimulation,
+  });
+  recalculate();
+} catch {
+  app.innerHTML = `<main class="boot"><h1>${t('loadError')}</h1><p>${t('launchHelp')}</p><button class="button" onclick="location.reload()">${t('retry')}</button></main>`;
+}
+
+// The printed map is smaller than on screen: refit it to the plan when print styles apply.
+const fitForPrint = () => { roofMap?.resize(); if (state.view === 'plan' && state.result) roofMap?.fitSelected(state.result.selectedIds); };
+window.addEventListener('beforeprint', fitForPrint);
+window.matchMedia('print').addEventListener('change', event => { if (event.matches) fitForPrint(); else roofMap?.resize(); });
+window.addEventListener('afterprint', () => roofMap?.resize());

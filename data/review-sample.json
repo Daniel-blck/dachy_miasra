@@ -1,0 +1,657 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Manual review queue; no ownership conclusions have been made.",
+  "parameters": {
+    "budgetPln": 5000000,
+    "coverage": 0.6,
+    "efficiency": 0.2,
+    "performanceRatio": 0.8,
+    "costPerKwpPln": 4000,
+    "fixedCostPln": 15000,
+    "minCapacityKwp": 3,
+    "maxCapacityKwp": 150,
+    "minSpecificYield": 0,
+    "co2KgPerMwh": 553,
+    "onlyGreen": false,
+    "omitInvestmentLabels": false,
+    "onlyCityLand": true,
+    "requireCurrentBuilding": true,
+    "omitHeritage": false
+  },
+  "selectedIds": [
+    "126102_9.0014.179/6.8_BUD",
+    "126104_9.0014.7/2.1_BUD",
+    "126104_9.0012.1/4.1_BUD",
+    "126102_9.0014.179/10.1_BUD",
+    "126105_9.0005.430.1_BUD",
+    "126105_9.0005.431/1.1_BUD",
+    "126102_9.0004.408/4.1_BUD",
+    "126104_9.0014.196/1.1_BUD",
+    "126105_9.0017.229/1.1_BUD",
+    "126105_9.0017.228/23.1_BUD"
+  ],
+  "selectedRoofsOutsideSample": [],
+  "inputSha256": {
+    "roofs": "a675e46b53f08c0de1342dd146c502ee8ced907d13e691fc6ec8ffe434d72260",
+    "geometry": "65e323c0ce2726d8fe8d54ec90f73e82381764d92db3ddc306845bf5df71510e"
+  },
+  "ownershipSource": {
+    "name": "MSIP · Struktura własności",
+    "directoryUrl": "https://www.bip.krakow.pl/?bip_id=1&id=12838&metka=1",
+    "wmsUrl": "https://msip.um.krakow.pl/arcgis/services/Obserwatorium/K01_GR_WLASNOSCI/MapServer/WMSServer",
+    "checkedOn": "2026-10-26",
+    "dataRetrieved": true,
+    "restUrl": "https://msip.um.krakow.pl/arcgis/rest/services/Obserwatorium/K01_GR_WLASNOSCI/MapServer/0"
+  },
+  "contextSources": [
+    {
+      "name": "MSIP · Adresy (punkty adresowe)",
+      "url": "https://msip.um.krakow.pl/Dane/Adresy_JSON.zip",
+      "currency": "Data wygenerowania plików: 2026-10-26_00:45:19",
+      "sha256": "77723bb76cbaf93078d8120c70f3345b7862dd06a5c3f1e84f72a8a9b86e6b62"
+    },
+    {
+      "name": "MSIP · Parki kulturowe",
+      "url": "https://msip.um.krakow.pl/Dane/Parki_kulturowe_JSON.zip",
+      "currency": "Data wygenerowania plików: 2026-06-10_08:11:34",
+      "sha256": "01260b3595d3ae23ccb427ce834a609ec3259c572024ccb5009e4fd23444a4bb"
+    }
+  ],
+  "registerSources": {
+    "retrievedAt": "2026-10-26T14:51:07.873Z",
+    "currency": {
+      "egib": "2026-10-25",
+      "ownership": "2026-02-05"
+    },
+    "sources": [
+      {
+        "name": "MSIP · Budynki ewidencyjne (EGiB)",
+        "url": "https://msip.um.krakow.pl/arcgis/rest/services/Pobieranie/Budynki/MapServer/0",
+        "features": 773
+      },
+      {
+        "name": "MSIP · Struktura własności działek",
+        "url": "https://msip.um.krakow.pl/arcgis/rest/services/Obserwatorium/K01_GR_WLASNOSCI/MapServer/0",
+        "features": 348
+      },
+      {
+        "name": "MSIP · Obiekty w rejestrze zabytków",
+        "url": "https://msip.um.krakow.pl/arcgis/rest/services/Obserwatorium/zabytki_do_pobrania/MapServer/0",
+        "features": 1418
+      },
+      {
+        "name": "MSIP · Obiekty w gminnej ewidencji zabytków",
+        "url": "https://msip.um.krakow.pl/arcgis/rest/services/Obserwatorium/zabytki_do_pobrania/MapServer/1",
+        "features": 5037
+      },
+      {
+        "name": "MSIP · Układy urbanistyczne w rejestrze zabytków",
+        "url": "https://msip.um.krakow.pl/arcgis/rest/services/Obserwatorium/Zabytki_aprx/MapServer/4",
+        "features": 11
+      },
+      {
+        "name": "MSIP · Obszar Pomnika Historii",
+        "url": "https://msip.um.krakow.pl/arcgis/rest/services/Obserwatorium/Zabytki_aprx/MapServer/5",
+        "features": 4
+      },
+      {
+        "name": "MSIP · Obszar UNESCO",
+        "url": "https://msip.um.krakow.pl/arcgis/rest/services/Obserwatorium/Zabytki_aprx/MapServer/9",
+        "features": 1
+      },
+      {
+        "name": "MSIP · Strefa buforowa UNESCO",
+        "url": "https://msip.um.krakow.pl/arcgis/rest/services/Obserwatorium/Zabytki_aprx/MapServer/8",
+        "features": 1
+      },
+      {
+        "name": "MSIP · Instalacje OZE (wykaz miejski)",
+        "url": "https://msip.um.krakow.pl/arcgis/rest/services/JP/JP_OZE/MapServer/0",
+        "features": 2853
+      }
+    ]
+  },
+  "sample": [
+    {
+      "id": "126102_9.0014.179/6.8_BUD",
+      "reasons": [
+        "selected"
+      ],
+      "usableAreaM2": 2899,
+      "investmentLabel": null,
+      "greenRoofPotential": true,
+      "geometryAvailable": true,
+      "position": {
+        "longitude": 19.920448381067896,
+        "latitude": 50.05748994555991,
+        "method": "geometry-bounding-box-center"
+      },
+      "reviewStatus": "pending",
+      "parcelId": null,
+      "parcelCategory": null,
+      "candidateParcelId": "126102_9.0014.179/6",
+      "candidateAddress": "Filarecka 17b",
+      "addressMethod": "nearest",
+      "district": "VII Zwierzyniec",
+      "culturalPark": null,
+      "buildingClass": "budynki oświaty nauki i kultury oraz sportowe",
+      "inEgib": true,
+      "ownershipHint": "Gmina Kraków - właściciel, działka oddana wyłącznie w zarząd (współzarząd)",
+      "heritageHint": null,
+      "resHint": null,
+      "buildingOwner": null,
+      "address": null,
+      "protectionStatus": "unknown",
+      "installedPv": "unknown",
+      "evidenceUrl": null,
+      "checkedAt": null,
+      "reviewer": null,
+      "notes": null
+    },
+    {
+      "id": "126104_9.0014.7/2.1_BUD",
+      "reasons": [
+        "selected"
+      ],
+      "usableAreaM2": 1349,
+      "investmentLabel": "Klaster Innowacji Społeczno-Gospodarczyc",
+      "greenRoofPotential": true,
+      "geometryAvailable": true,
+      "position": {
+        "longitude": 19.966344146848556,
+        "latitude": 50.049852179361736,
+        "method": "geometry-bounding-box-center"
+      },
+      "reviewStatus": "pending",
+      "parcelId": null,
+      "parcelCategory": null,
+      "candidateParcelId": "126104_9.0014.7/2",
+      "candidateAddress": "Zabłocie 20",
+      "addressMethod": "inside",
+      "district": "XIII Podgórze",
+      "culturalPark": null,
+      "buildingClass": "budynki biurowe",
+      "inEgib": true,
+      "ownershipHint": "Gmina Kraków - właściciel, działka oddana w inne formy władania",
+      "heritageHint": null,
+      "resHint": null,
+      "buildingOwner": null,
+      "address": null,
+      "protectionStatus": "unknown",
+      "installedPv": "unknown",
+      "evidenceUrl": null,
+      "checkedAt": null,
+      "reviewer": null,
+      "notes": null
+    },
+    {
+      "id": "126104_9.0012.1/4.1_BUD",
+      "reasons": [
+        "selected",
+        "largest"
+      ],
+      "usableAreaM2": 6320,
+      "investmentLabel": null,
+      "greenRoofPotential": true,
+      "geometryAvailable": true,
+      "position": {
+        "longitude": 19.93152623846771,
+        "latitude": 50.04795180528923,
+        "method": "geometry-bounding-box-center"
+      },
+      "reviewStatus": "pending",
+      "parcelId": null,
+      "parcelCategory": null,
+      "candidateParcelId": "126104_9.0012.1/4",
+      "candidateAddress": "Marii Konopnickiej 17",
+      "addressMethod": "inside",
+      "district": "VIII Dębniki",
+      "culturalPark": null,
+      "buildingClass": "budynki oświaty nauki i kultury oraz sportowe",
+      "inEgib": true,
+      "ownershipHint": "Gmina Kraków - właściciel, działka oddana w inne formy władania",
+      "heritageHint": "unescoBuffer",
+      "resHint": null,
+      "buildingOwner": null,
+      "address": null,
+      "protectionStatus": "unknown",
+      "installedPv": "unknown",
+      "evidenceUrl": null,
+      "checkedAt": null,
+      "reviewer": null,
+      "notes": null
+    },
+    {
+      "id": "126102_9.0014.179/10.1_BUD",
+      "reasons": [
+        "selected"
+      ],
+      "usableAreaM2": 5411,
+      "investmentLabel": null,
+      "greenRoofPotential": true,
+      "geometryAvailable": true,
+      "position": {
+        "longitude": 19.92048136615415,
+        "latitude": 50.05804726304877,
+        "method": "geometry-bounding-box-center"
+      },
+      "reviewStatus": "pending",
+      "parcelId": null,
+      "parcelCategory": null,
+      "candidateParcelId": "126102_9.0014.179/10",
+      "candidateAddress": "Józefa Kałuży 1",
+      "addressMethod": "inside",
+      "district": "VII Zwierzyniec",
+      "culturalPark": null,
+      "buildingClass": "budynki oświaty nauki i kultury oraz sportowe",
+      "inEgib": true,
+      "ownershipHint": "Gmina Kraków - właściciel, działka oddana wyłącznie w zarząd (współzarząd)",
+      "heritageHint": null,
+      "resHint": null,
+      "buildingOwner": null,
+      "address": null,
+      "protectionStatus": "unknown",
+      "installedPv": "unknown",
+      "evidenceUrl": null,
+      "checkedAt": null,
+      "reviewer": null,
+      "notes": null
+    },
+    {
+      "id": "126105_9.0005.430.1_BUD",
+      "reasons": [
+        "selected"
+      ],
+      "usableAreaM2": 1063,
+      "investmentLabel": null,
+      "greenRoofPotential": true,
+      "geometryAvailable": true,
+      "position": {
+        "longitude": 19.965870218346698,
+        "latitude": 50.061227502545535,
+        "method": "geometry-bounding-box-center"
+      },
+      "reviewStatus": "pending",
+      "parcelId": null,
+      "parcelCategory": null,
+      "candidateParcelId": "126105_9.0005.430",
+      "candidateAddress": "płk. Francesco Nullo 15",
+      "addressMethod": "inside",
+      "district": "II Grzegórzki",
+      "culturalPark": null,
+      "buildingClass": "budynki mieszkalne",
+      "inEgib": true,
+      "ownershipHint": "Gmina Kraków - właściciel, lecz są także inni właściciele (ale nie Skarb Państwa, ani Powiat Kraków (grodzki))",
+      "heritageHint": null,
+      "resHint": null,
+      "buildingOwner": null,
+      "address": null,
+      "protectionStatus": "unknown",
+      "installedPv": "unknown",
+      "evidenceUrl": null,
+      "checkedAt": null,
+      "reviewer": null,
+      "notes": null
+    },
+    {
+      "id": "126105_9.0005.431/1.1_BUD",
+      "reasons": [
+        "selected"
+      ],
+      "usableAreaM2": 1052,
+      "investmentLabel": null,
+      "greenRoofPotential": true,
+      "geometryAvailable": true,
+      "position": {
+        "longitude": 19.965869810796143,
+        "latitude": 50.06078952706647,
+        "method": "geometry-bounding-box-center"
+      },
+      "reviewStatus": "pending",
+      "parcelId": null,
+      "parcelCategory": null,
+      "candidateParcelId": "126105_9.0005.431/1",
+      "candidateAddress": "płk. Francesco Nullo 13",
+      "addressMethod": "inside",
+      "district": "II Grzegórzki",
+      "culturalPark": null,
+      "buildingClass": "budynki mieszkalne",
+      "inEgib": true,
+      "ownershipHint": "Gmina Kraków - właściciel, lecz są także inni właściciele (ale nie Skarb Państwa, ani Powiat Kraków (grodzki))",
+      "heritageHint": null,
+      "resHint": null,
+      "buildingOwner": null,
+      "address": null,
+      "protectionStatus": "unknown",
+      "installedPv": "unknown",
+      "evidenceUrl": null,
+      "checkedAt": null,
+      "reviewer": null,
+      "notes": null
+    },
+    {
+      "id": "126102_9.0004.408/4.1_BUD",
+      "reasons": [
+        "selected"
+      ],
+      "usableAreaM2": 1031,
+      "investmentLabel": null,
+      "greenRoofPotential": false,
+      "geometryAvailable": true,
+      "position": {
+        "longitude": 19.914973127094683,
+        "latitude": 50.070056939277336,
+        "method": "geometry-bounding-box-center"
+      },
+      "reviewStatus": "pending",
+      "parcelId": null,
+      "parcelCategory": null,
+      "candidateParcelId": "126102_9.0004.408/4",
+      "candidateAddress": "Chocimska 22",
+      "addressMethod": "inside",
+      "district": "V Krowodrza",
+      "culturalPark": null,
+      "buildingClass": "budynki oświaty nauki i kultury oraz sportowe",
+      "inEgib": true,
+      "ownershipHint": "Gmina Kraków - właściciel, działka oddana w inne formy władania",
+      "heritageHint": null,
+      "resHint": null,
+      "buildingOwner": null,
+      "address": null,
+      "protectionStatus": "unknown",
+      "installedPv": "unknown",
+      "evidenceUrl": null,
+      "checkedAt": null,
+      "reviewer": null,
+      "notes": null
+    },
+    {
+      "id": "126104_9.0014.196/1.1_BUD",
+      "reasons": [
+        "selected"
+      ],
+      "usableAreaM2": 884,
+      "investmentLabel": null,
+      "greenRoofPotential": true,
+      "geometryAvailable": true,
+      "position": {
+        "longitude": 19.964408936643018,
+        "latitude": 50.043800172362964,
+        "method": "geometry-bounding-box-center"
+      },
+      "reviewStatus": "pending",
+      "parcelId": null,
+      "parcelCategory": null,
+      "candidateParcelId": "126104_9.0014.196/1",
+      "candidateAddress": "Zaułek 10",
+      "addressMethod": "nearest",
+      "district": "XIII Podgórze",
+      "culturalPark": null,
+      "buildingClass": "pozostałe budynki niemieszkalne",
+      "inEgib": true,
+      "ownershipHint": "Gmina Kraków - właściciel, działka oddana w inne formy władania",
+      "heritageHint": null,
+      "resHint": null,
+      "buildingOwner": null,
+      "address": null,
+      "protectionStatus": "unknown",
+      "installedPv": "unknown",
+      "evidenceUrl": null,
+      "checkedAt": null,
+      "reviewer": null,
+      "notes": null
+    },
+    {
+      "id": "126105_9.0017.229/1.1_BUD",
+      "reasons": [
+        "selected"
+      ],
+      "usableAreaM2": 605,
+      "investmentLabel": null,
+      "greenRoofPotential": true,
+      "geometryAvailable": true,
+      "position": {
+        "longitude": 19.95251942834832,
+        "latitude": 50.054523783163376,
+        "method": "geometry-bounding-box-center"
+      },
+      "reviewStatus": "pending",
+      "parcelId": null,
+      "parcelCategory": null,
+      "candidateParcelId": "126105_9.0017.229/1",
+      "candidateAddress": "Michała Siedleckiego 13",
+      "addressMethod": "inside",
+      "district": "II Grzegórzki",
+      "culturalPark": null,
+      "buildingClass": "budynki mieszkalne",
+      "inEgib": true,
+      "ownershipHint": "Gmina Kraków - właściciel, lecz są także inni właściciele (ale nie Skarb Państwa, ani Powiat Kraków (grodzki))",
+      "heritageHint": "inventory: ul. Siedleckiego Michała 13; unescoBuffer",
+      "resHint": null,
+      "buildingOwner": null,
+      "address": null,
+      "protectionStatus": "unknown",
+      "installedPv": "unknown",
+      "evidenceUrl": null,
+      "checkedAt": null,
+      "reviewer": null,
+      "notes": null
+    },
+    {
+      "id": "126105_9.0017.228/23.1_BUD",
+      "reasons": [
+        "selected"
+      ],
+      "usableAreaM2": 456,
+      "investmentLabel": null,
+      "greenRoofPotential": true,
+      "geometryAvailable": true,
+      "position": {
+        "longitude": 19.953381290505984,
+        "latitude": 50.05462301543058,
+        "method": "geometry-bounding-box-center"
+      },
+      "reviewStatus": "pending",
+      "parcelId": null,
+      "parcelCategory": null,
+      "candidateParcelId": "126105_9.0017.228/23",
+      "candidateAddress": "Aleja Ignacego Daszyńskiego 27",
+      "addressMethod": "inside",
+      "district": "II Grzegórzki",
+      "culturalPark": null,
+      "buildingClass": "budynki mieszkalne",
+      "inEgib": true,
+      "ownershipHint": "Gmina Kraków - właściciel, lecz są także inni właściciele (ale nie Skarb Państwa, ani Powiat Kraków (grodzki))",
+      "heritageHint": "inventory: al. Ignacego Daszyńskiego 27; unescoBuffer",
+      "resHint": null,
+      "buildingOwner": null,
+      "address": null,
+      "protectionStatus": "unknown",
+      "installedPv": "unknown",
+      "evidenceUrl": null,
+      "checkedAt": null,
+      "reviewer": null,
+      "notes": null
+    },
+    {
+      "id": "126102_9.0004.464/1.1_BUD",
+      "reasons": [
+        "investment"
+      ],
+      "usableAreaM2": 360,
+      "investmentLabel": "Samorządowe Przedszkole nr 119",
+      "greenRoofPotential": true,
+      "geometryAvailable": true,
+      "position": {
+        "longitude": 19.916343689131807,
+        "latitude": 50.069285422508344,
+        "method": "geometry-bounding-box-center"
+      },
+      "reviewStatus": "pending",
+      "parcelId": null,
+      "parcelCategory": null,
+      "candidateParcelId": "126102_9.0004.464/1",
+      "candidateAddress": "Za Targiem 4",
+      "addressMethod": "inside",
+      "district": "V Krowodrza",
+      "culturalPark": null,
+      "buildingClass": "budynki oświaty nauki i kultury oraz sportowe",
+      "inEgib": true,
+      "ownershipHint": "Gmina Kraków - właściciel, działka oddana w inne formy władania",
+      "heritageHint": null,
+      "resHint": null,
+      "buildingOwner": null,
+      "address": null,
+      "protectionStatus": "unknown",
+      "installedPv": "unknown",
+      "evidenceUrl": null,
+      "checkedAt": null,
+      "reviewer": null,
+      "notes": null
+    },
+    {
+      "id": "126102_9.0004.528/1.1_BUD",
+      "reasons": [
+        "investment"
+      ],
+      "usableAreaM2": 1045,
+      "investmentLabel": "IX Liceum Ogólnokształcące",
+      "greenRoofPotential": false,
+      "geometryAvailable": true,
+      "position": {
+        "longitude": 19.91947453542948,
+        "latitude": 50.069051363472404,
+        "method": "geometry-bounding-box-center"
+      },
+      "reviewStatus": "pending",
+      "parcelId": null,
+      "parcelCategory": null,
+      "candidateParcelId": "126102_9.0004.528/1",
+      "candidateAddress": "Kazimierza Czapińskiego 5",
+      "addressMethod": "inside",
+      "district": "V Krowodrza",
+      "culturalPark": null,
+      "buildingClass": "budynki oświaty nauki i kultury oraz sportowe",
+      "inEgib": true,
+      "ownershipHint": "Gmina Kraków - właściciel, działka oddana w inne formy władania",
+      "heritageHint": null,
+      "resHint": null,
+      "buildingOwner": null,
+      "address": null,
+      "protectionStatus": "unknown",
+      "installedPv": "unknown",
+      "evidenceUrl": null,
+      "checkedAt": null,
+      "reviewer": null,
+      "notes": null
+    },
+    {
+      "id": "126102_9.0014.291.1_BUD",
+      "reasons": [
+        "investment"
+      ],
+      "usableAreaM2": 339,
+      "investmentLabel": "Budynek Urzędu Miasta Krakowa",
+      "greenRoofPotential": true,
+      "geometryAvailable": true,
+      "position": {
+        "longitude": 19.92195688346832,
+        "latitude": 50.05505931384195,
+        "method": "geometry-bounding-box-center"
+      },
+      "reviewStatus": "pending",
+      "parcelId": null,
+      "parcelCategory": null,
+      "candidateParcelId": "126102_9.0014.291",
+      "candidateAddress": "Michała Stachowicza 18",
+      "addressMethod": "inside",
+      "district": "VII Zwierzyniec",
+      "culturalPark": null,
+      "buildingClass": "budynki biurowe",
+      "inEgib": true,
+      "ownershipHint": "Gmina Kraków - właściciel, działka oddana w inne formy władania",
+      "heritageHint": "inventory: ul. Borelowskiego – Lelewela Marcina 18",
+      "resHint": null,
+      "buildingOwner": null,
+      "address": null,
+      "protectionStatus": "unknown",
+      "installedPv": "unknown",
+      "evidenceUrl": null,
+      "checkedAt": null,
+      "reviewer": null,
+      "notes": null
+    },
+    {
+      "id": "126102_9.0004.314/1.1_BUD",
+      "reasons": [
+        "green"
+      ],
+      "usableAreaM2": 207,
+      "investmentLabel": null,
+      "greenRoofPotential": true,
+      "geometryAvailable": true,
+      "position": {
+        "longitude": 19.92270039204738,
+        "latitude": 50.07032042384212,
+        "method": "geometry-bounding-box-center"
+      },
+      "reviewStatus": "pending",
+      "parcelId": null,
+      "parcelCategory": null,
+      "candidateParcelId": "126102_9.0004.314/1",
+      "candidateAddress": "Stanisława Konarskiego 43B",
+      "addressMethod": "inside",
+      "district": "V Krowodrza",
+      "culturalPark": null,
+      "buildingClass": "pozostałe budynki niemieszkalne",
+      "inEgib": true,
+      "ownershipHint": "Gmina Kraków - właściciel, działka oddana wyłącznie w zarząd (współzarząd)",
+      "heritageHint": null,
+      "resHint": null,
+      "buildingOwner": null,
+      "address": null,
+      "protectionStatus": "unknown",
+      "installedPv": "unknown",
+      "evidenceUrl": null,
+      "checkedAt": null,
+      "reviewer": null,
+      "notes": null
+    },
+    {
+      "id": "126102_9.0004.419/2.1_BUD",
+      "reasons": [
+        "green"
+      ],
+      "usableAreaM2": 6,
+      "investmentLabel": null,
+      "greenRoofPotential": true,
+      "geometryAvailable": true,
+      "position": {
+        "longitude": 19.9148598305675,
+        "latitude": 50.06769214415546,
+        "method": "geometry-bounding-box-center"
+      },
+      "reviewStatus": "pending",
+      "parcelId": null,
+      "parcelCategory": null,
+      "candidateParcelId": "126102_9.0004.419/2",
+      "candidateAddress": "Czarnowiejska 82",
+      "addressMethod": "nearest",
+      "district": "V Krowodrza",
+      "culturalPark": null,
+      "buildingClass": "budynki handlowo-usługowe",
+      "inEgib": true,
+      "ownershipHint": "Gmina Kraków - właściciel, działka oddana w zarząd (współzarząd) i inne formy władania",
+      "heritageHint": null,
+      "resHint": null,
+      "buildingOwner": null,
+      "address": null,
+      "protectionStatus": "unknown",
+      "installedPv": "unknown",
+      "evidenceUrl": null,
+      "checkedAt": null,
+      "reviewer": null,
+      "notes": null
+    }
+  ]
+}

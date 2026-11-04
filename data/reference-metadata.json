@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "label": "Pilotaż · dachy z pakietu badawczego",
+  "referenceFile": "krakow-all-in-one.html",
+  "referenceSha256": "66863b6a8fde30335a02476c3148d822a6ebfcb6d25db683615c9fc31943d41f",
+  "snapshotDate": null,
+  "records": 927,
+  "greenRoofPotential": 297,
+  "investmentLabels": 27,
+  "geographicCoordinatesInReference": false,
+  "ownershipVerified": false,
+  "sources": [
+    {
+      "name": "MONIT-AIR · potencjał solarny dachów",
+      "url": "https://msip.um.krakow.pl/arcgis/rest/services/MONIT-AIR/WS_MA_Potencal_solarny_dachow/MapServer/0",
+      "role": "Promieniowanie i powierzchnia; serwis opisany jako Atlas 2016."
+    },
+    {
+      "name": "MSIP Kraków",
+      "url": "https://msip.krakow.pl/",
+      "role": "Pochodzenie przypisania do działek publicznych w makiecie; przypisanie niezweryfikowane."
+    },
+    {
+      "name": "Miejskie inwestycje proklimatyczne",
+      "url": "https://msip.krakow.pl/dataset/2261",
+      "role": "Etykiety inwestycji z makiety; nie potwierdzają obecności PV."
+    }
+  ]
+}

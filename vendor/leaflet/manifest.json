@@ -1,0 +1,44 @@
+{
+  "name": "Leaflet",
+  "version": "1.9.4",
+  "license": "BSD-2-Clause",
+  "source": "https://unpkg.com/leaflet@1.9.4/",
+  "files": {
+    "leaflet.js": {
+      "sha256Base64": "20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=",
+      "bytes": 147552
+    },
+    "leaflet.css": {
+      "sha256Base64": "p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=",
+      "bytes": 14806
+    },
+    "leaflet.js.map": {
+      "sha256Base64": "YAoQ3FzREN4GmVENMir8vgHHypC0xfSK3CAxTHCqx1M=",
+      "bytes": 225544
+    },
+    "LICENSE": {
+      "sha256Base64": "U+jcJYYgFOQyR0HKGPvjYR4R1C72n1n4bqjFOJZH1Ms=",
+      "bytes": 1395
+    },
+    "images/layers.png": {
+      "sha256Base64": "Hbvp0CjikvNvy6j4s6KNXokydU/CIVuaxp5M3s9RB8Y=",
+      "bytes": 696
+    },
+    "images/layers-2x.png": {
+      "sha256Base64": "Bm2sqFDY/77wB68AsG6sABVyje4nnFHzy2xxbffELt8=",
+      "bytes": 1259
+    },
+    "images/marker-icon.png": {
+      "sha256Base64": "V0w6XMqF9BFAhbaEFZbWLwDXyJLHsD8oy/owHesdxDc=",
+      "bytes": 1466
+    },
+    "images/marker-icon-2x.png": {
+      "sha256Base64": "ABecTB7oMNOhCEEq4NKU9Vd2z+sIXGASmjmqb8SuJSg=",
+      "bytes": 2464
+    },
+    "images/marker-shadow.png": {
+      "sha256Base64": "Jk9cZAM58ELdcpBiz8BMF/jqDymIK1OOOEjtjxDttNo=",
+      "bytes": 618
+    }
+  }
+}
